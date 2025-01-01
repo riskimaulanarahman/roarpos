@@ -31,19 +31,26 @@ class ProductController extends Controller
             'name' => 'required|min:3|unique:products',
             'price' => 'required|integer',
             'stock' => 'required|integer',
-            'category_id' => 'required',
-            'image' => 'required|image|mimes:png,jpg,jpeg'
+            'category_id' => 'required'
+            // 'image' => 'required|image|mimes:png,jpg,jpeg'
         ]);
-        $filename = time() . '.' . $request->image->extension();
-        $request->image->storeAs('public/products', $filename);
-        $data = $request->all();
+        // $filename = time() . '.' . $request->image->extension();
+        // $request->image->storeAs('public/products', $filename);
+        // $data = $request->all();
 
         $product = new \App\Models\Product;
         $product->name = $request->name;
         $product->price = (int) $request->price;
         $product->stock = (int) $request->stock;
         $product->category_id = $request->category_id;
-        $product->image = $filename;
+        // $product->image = $filename;
+        if ($request->hasFile('image')) {
+            $filename = time() . '.' . $request->image->extension();
+            $request->image->storeAs('public/products', $filename);
+            $product->image = $filename;
+        } else {
+            $product->image = env('APP_URL') . '/img/roar-logo.png'; // Path relatif ke gambar default
+        }
         $product->save();
 
         return redirect()->route('product.index')->with('success', 'Product successfully created');
