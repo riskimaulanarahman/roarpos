@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'Jago Flutter')
+@section('title', 'ROAR')
 
 @push('style')
     <!-- CSS Libraries -->
