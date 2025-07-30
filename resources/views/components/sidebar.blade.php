@@ -42,6 +42,20 @@
                 <i class="fas fa-book"></i> <span>Report</span></a>
             </li> --}}
             <li class="nav-item dropdown">
+                <a href="#" class="nav-link has-dropdown "><i class="fas fa-dollar"></i><span>Finance</span></a>
+                <ul class="dropdown-menu">
+                    <li class="{{ Request::is('income*') ? 'active' : '' }}">
+                        <a class="nav-link" href="{{ route('income.index') }}">
+                            <i class="fas fa-arrow-down"></i> <span>Uang Masuk</span></a>
+                    </li>
+                    {{-- <li class="{{ Request::is('keluar*') ? 'active' : '' }}">
+                        <a class="nav-link" href="{{ route('finance.keluar') }}">
+                            <i class="fas fa-arrow-up"></i> <span>Uang Keluar</span></a>
+                    </li> --}}
+
+                </ul>
+            </li>
+            <li class="nav-item dropdown">
                 <a href="#" class="nav-link has-dropdown "><i class="fas fa-book"></i><span>Reports</span></a>
                 <ul class="dropdown-menu">
                     <li class="{{ Request::is('report*') ? 'active' : '' }}">

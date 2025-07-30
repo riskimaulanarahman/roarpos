@@ -52,4 +52,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/product_sales/filter', [\App\Http\Controllers\ProductSalesController::class, 'productSales'])->name('productSales.index');
     Route::get('/product_sales/download', [\App\Http\Controllers\ProductSalesController::class,'download'])->name('productSales.download');
 
+    // Route::get('/finance-masuk', [\App\Http\Controllers\FinanceController::class, 'index'])->name('finance.masuk');
+    Route::resource('income', \App\Http\Controllers\IncomeController::class);
+    // Route::resource('finance-keluar', \App\Http\Controllers\FinanceController::class);
+    // Route::get('/finance-keluar', [\App\Http\Controllers\FinanceController::class, 'index'])->name('finance.keluar');
+
+
 });
