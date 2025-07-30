@@ -18,7 +18,7 @@ class ProductController extends Controller
         //load category
         $products->load('category');
         return response()->json([
-            'success' => true,
+            // 'success' => true,
             'message' => 'List Data Product',
             'data' => $products
         ], 200);
