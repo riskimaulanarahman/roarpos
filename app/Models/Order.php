@@ -11,28 +11,38 @@ class Order extends Model
 
     protected $fillable =
     [
-        'payment_amount',
-        'sub_total',
-        'tax',
-        'discount',
-        'discount_amount',
-        'service_charge',
+        'transaction_number',
+        'cashier_id',
+        // 'payment_amount',
+        // 'sub_total',
+        // 'tax',
+        // 'discount',
+        // 'discount_amount',
+        // 'service_charge',
         'total_price',
-        'payment_method',
         'total_item',
-        'kasir_id',
-        'cashier_name',
-        'transaction_time'
+        'payment_method',
+        // 'cashier_name',
+        // 'transaction_time'
     ];
 
-    public function kasir()
-    {
-        return $this->belongsTo(User::class, 'kasir_id', 'id');
-    }
+    // public function kasir()
+    // {
+    //     return $this->belongsTo(User::class, 'kasir_id', 'id');
+    // }
 
     //
+    // public function orderItems()
+    // {
+    //     return $this->hasMany(OrderItem::class, 'order_id', 'id');
+    // }
+
     public function orderItems()
     {
-        return $this->hasMany(OrderItem::class, 'order_id', 'id');
+        return $this->hasMany(OrderItem::class);
+    }
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'cahier_id');
     }
 }
