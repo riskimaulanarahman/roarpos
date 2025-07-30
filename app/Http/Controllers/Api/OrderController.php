@@ -11,76 +11,92 @@ class OrderController extends Controller
     //store order and order item
     public function store(Request $request)
     {
-        $request->validate([
-            'payment_amount' => 'required',
-            'sub_total' => 'required',
-            'tax' => 'required',
-            'discount' => 'required',
-            'discount_amount' => 'required',
-            'service_charge' => 'required',
-            'total_price' => 'required',
-            'payment_method' => 'required',
-            'total_item' => 'required',
-            'kasir_id' => 'required',
-            'cashier_name' => 'required',
-            'transaction_time' => 'required',
-            'order_items' => 'required|array',
-            'order_items.*.product_id' => 'required|exists:products,id',
-            'order_items.*.quantity' => 'required|numeric',
-            'order_items.*.total_price' => 'required|numeric',
-        ]);
-        $order = \App\Models\Order::create([
-            'payment_amount' => $request->payment_amount,
-            'sub_total' => $request->sub_total,
-            'tax' => $request->tax,
-            'discount' => $request->discount,
-            'discount_amount' => $request->discount_amount,
-            'service_charge' => $request->service_charge,
-            'total_price' => $request->total_price,
-            'payment_method' => $request->payment_method,
-            'total_item' => $request->total_item,
-            'kasir_id' => $request->kasir_id,
-            'cashier_name' => $request->cashier_name,
-            'transaction_time' => $request->transaction_time
+        $validatedData = $request->validate([
+            'cashier_id' => 'required',
+            'items' => 'required|array',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        $orderItems = [];
-        foreach ($request->order_items as $item) {
-            $orderItem = \App\Models\OrderItem::create([
-                'order_id' => $order->id,
+        $order = \App\Models\Order::create([
+            'transaction_number' => 'TRX-' . strtoupper(uniqid()),
+            'cashier_id' => $validatedData['cashier_id'],
+            'total_price' => collect($validatedData['items'])->sum(function ($item) {
+                return \App\Models\Product::find($item['product_id'])->price * $item['quantity'];
+            }),
+            'total_item' => collect($validatedData['items'])->sum('quantity'),
+            'payment_method' => $request->input('payment_method', 'cash'), // Default to 'cash' if not provided
+        ]);
+
+        foreach ($validatedData['items'] as $item) {
+            $order->orderItems()->create([
                 'product_id' => $item['product_id'],
                 'quantity' => $item['quantity'],
-                'total_price' => $item['total_price'],
+                'total_price' => \App\Models\Product::find($item['product_id'])->price * $item['quantity'],
             ]);
-            // Load the product relationship
-            $orderItem->load('product');
-            $orderItems[] = $orderItem;
         }
 
-        // returm response include data
+        \Log::info([
+            'raw_created_at' => $order->getRawOriginal('created_at'),
+            'eloquent_created_at' => (string) $order->created_at,
+            'timezone_app' => config('app.timezone'),
+            'php_timezone' => date_default_timezone_get(),
+        ]);
+
         return response()->json([
-            'success' => true,
-            'message' => 'Order Created',
-            'data' => [
-                'order' => $order,
-                'order_items' => $orderItems
-            ]
+            'message' => 'Order created successfully',
+            'data' => $order->load('orderItems.product'),
         ], 201);
     }
 
+    // public function index(Request $request)
+    // {
+    //     $start_date = $request->input('start_date');
+    //     $end_date = $request->input('end_date');
+    //     if ($start_date && $end_date) {
+    //         $orders = Order::whereBetween('created_at', [$start_date, $end_date])->get();
+    //     } else {
+    //         $orders = Order::all();
+    //     }
+    //     return response()->json([
+    //         'status' => 'success',
+    //         'data' => $orders
+    //     ], 200);
+    // }
     public function index(Request $request)
     {
-        $start_date = $request->input('start_date');
-        $end_date = $request->input('end_date');
-        if ($start_date && $end_date) {
-            $orders = Order::whereBetween('created_at', [$start_date, $end_date])->get();
-        } else {
-            $orders = Order::all();
-        }
+        $orders = \App\Models\Order::with('orderItems.product')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'transaction_number' => $order->transaction_number,
+                    'cashier_id' => $order->cashier_id,
+                    'total_price' => $order->total_price,
+                    'total_item' => $order->total_item,
+                    'payment_method' => $order->payment_method,
+                    // Kirim sebagai UTC ISO 8601
+                    'created_at' => $order->created_at->copy()->setTimezone('UTC')->toIso8601String(),
+                    'updated_at' => $order->updated_at->copy()->setTimezone('UTC')->toIso8601String(),
+                    'order_items' => $order->orderItems->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'order_id' => $item->order_id,
+                            'product_id' => $item->product_id,
+                            'quantity' => $item->quantity,
+                            'total_price' => $item->total_price,
+                            'created_at' => $item->created_at->copy()->setTimezone('UTC')->toIso8601String(),
+                            'updated_at' => $item->updated_at->copy()->setTimezone('UTC')->toIso8601String(),
+                            'product' => $item->product,
+                        ];
+                    }),
+                ];
+            });
+
         return response()->json([
-            'status' => 'success',
-            'data' => $orders
-        ], 200);
+            'data' => $orders,
+        ]);
     }
 
     public function getAllOrder()
