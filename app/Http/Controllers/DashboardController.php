@@ -19,7 +19,7 @@ class DashboardController extends Controller
         $categories = Category::count();
         $discounts= Discount::count();
         $additional_charges = \App\Models\AdditionalCharges::count();
-        $orders = Order::with('kasir')->whereDate('created_at', Carbon::today())->orderBy('created_at', 'DESC')->paginate(10);
+        $orders = Order::with('user')->whereDate('created_at', Carbon::today())->orderBy('created_at', 'DESC')->paginate(10);
         $totalPriceToday = Order::whereDate('created_at', Carbon::today())->sum('total_price');
         $month = date('m');
         $year = date('Y');

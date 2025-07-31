@@ -27,10 +27,10 @@ class Order extends Model
         // 'transaction_time'
     ];
 
-    public function kasir()
-    {
-        return $this->belongsTo(User::class, 'kasir_id', 'id');
-    }
+    // public function kasir()
+    // {
+    //     return $this->belongsTo(User::class, 'cashier_id', 'id');
+    // }
 
     //
     // public function orderItems()
