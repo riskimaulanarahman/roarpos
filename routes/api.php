@@ -37,6 +37,7 @@ Route::delete('/products/{id}', [App\Http\Controllers\Api\ProductController::cla
 Route::post('/orders', [App\Http\Controllers\Api\OrderController::class, 'store'])->middleware('auth:sanctum');
 Route::get('/orders/date', [App\Http\Controllers\Api\OrderController::class, 'index'])->middleware('auth:sanctum');
 Route::get('/orders', [App\Http\Controllers\Api\OrderController::class, 'getAllOrder'])->middleware('auth:sanctum');
+Route::post('orders/{id}/refund', [App\Http\Controllers\Api\OrderController::class, 'refund'])->middleware('auth:sanctum');
 
 // api resource discount
 Route::apiResource('discounts', \App\Http\Controllers\Api\DiscountController::class)->middleware('auth:sanctum');

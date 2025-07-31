@@ -49,20 +49,6 @@ class OrderController extends Controller
         ], 201);
     }
 
-    // public function index(Request $request)
-    // {
-    //     $start_date = $request->input('start_date');
-    //     $end_date = $request->input('end_date');
-    //     if ($start_date && $end_date) {
-    //         $orders = Order::whereBetween('created_at', [$start_date, $end_date])->get();
-    //     } else {
-    //         $orders = Order::all();
-    //     }
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'data' => $orders
-    //     ], 200);
-    // }
     public function index(Request $request)
     {
         $orders = \App\Models\Order::with('orderItems.product')
@@ -108,5 +94,27 @@ class OrderController extends Controller
             'status' => 'success',
             'data' => $order
         ], 200);
+    }
+
+    // Fungsi refund order
+    public function refund($id)
+    {
+        $order = Order::find($id);
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found.'
+            ], 404);
+        }
+
+        // Ubah status menjadi refund
+        $order->status = 'refund';
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order status updated to refund.',
+            'order'   => $order,
+        ]);
     }
 }

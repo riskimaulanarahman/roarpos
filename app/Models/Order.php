@@ -13,15 +13,16 @@ class Order extends Model
     [
         'transaction_number',
         'cashier_id',
+        'total_price',
+        'total_item',
+        'payment_method',
+        'status'
         // 'payment_amount',
         // 'sub_total',
         // 'tax',
         // 'discount',
         // 'discount_amount',
         // 'service_charge',
-        'total_price',
-        'total_item',
-        'payment_method',
         // 'cashier_name',
         // 'transaction_time'
     ];
