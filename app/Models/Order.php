@@ -44,6 +44,6 @@ class Order extends Model
     }
     public function user()
     {
-        return $this->belongsTo(User::class, 'cahier_id');
+        return $this->belongsTo(User::class, 'cashier_id');
     }
 }
