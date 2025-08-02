@@ -97,7 +97,7 @@ class OrderController extends Controller
     }
 
     // Fungsi refund order
-    public function refund($id)
+    public function refund($id,$method)
     {
         $order = Order::find($id);
         if (!$order) {
@@ -109,6 +109,7 @@ class OrderController extends Controller
 
         // Ubah status menjadi refund
         $order->status = 'refund';
+        $order->refund_method = $method;
         $order->save();
 
         return response()->json([
