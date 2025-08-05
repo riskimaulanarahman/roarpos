@@ -88,9 +88,11 @@ class ReportController extends Controller
             DB::raw('SUM(order_items.quantity) as total_quantity'),
             DB::raw('SUM(order_items.total_price) as total_price')
         )
-            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->join('products', function ($join) {
+                $join->on('order_items.product_id', '=', 'products.id')
+                    ->whereNull('products.status');
+            })
             ->whereBetween(DB::raw('DATE(order_items.created_at)'), [$start_date, $end_date])
-            ->whereNull('products.status')
             ->groupBy('products.id', 'products.name', 'products.price')
             ->orderBy('total_quantity', 'desc');
 
