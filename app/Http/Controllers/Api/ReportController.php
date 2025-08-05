@@ -46,6 +46,7 @@ class ReportController extends Controller
         $total = $totalSubtotal - $totalDiscount + $totalTax + $totalServiceCharge;
         $totalSoldQuantity = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
         ->whereBetween('orders.created_at', [$start_date, $end_date])
+        ->whereNull('orders.status')
         ->sum('order_items.quantity');
         $data = [
             'total_revenue' => $totalRevenue,
