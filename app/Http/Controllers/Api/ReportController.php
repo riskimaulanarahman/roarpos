@@ -32,7 +32,8 @@ class ReportController extends Controller
         $end_date = Carbon::parse($request->end_date)->endOfDay();
 
         $query = Order::query()
-            ->whereBetween('created_at', [$start_date, $end_date]);
+            ->whereBetween('created_at', [$start_date, $end_date])
+            ->where('status','!=','refund');
 
 
         $orders = $query->get();
