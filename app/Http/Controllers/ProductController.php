@@ -25,6 +25,32 @@ class ProductController extends Controller
         return view('pages.products.create', compact('categories'));
     }
 
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required|min:3|unique:products',
+    //         'price' => 'required|integer',
+    //         'stock' => 'required|integer',
+    //         'category_id' => 'required'
+    //     ]);
+
+    //     $product = new \App\Models\Product;
+    //     $product->name = $request->name;
+    //     $product->price = (int) $request->price;
+    //     $product->stock = (int) $request->stock;
+    //     $product->category_id = $request->category_id;
+    //     if ($request->hasFile('image')) {
+    //         $filename = time() . '.' . $request->image->extension();
+    //         $request->image->storeAs('public/products', $filename);
+    //         $product->image = $filename;
+    //     } else {
+    //         $product->image = env('APP_URL') . '/img/roar-logo.png'; // Path relatif ke gambar default
+    //     }
+    //     $product->save();
+
+    //     return redirect()->route('product.index')->with('success', 'Product successfully created');
+    // }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -32,25 +58,23 @@ class ProductController extends Controller
             'price' => 'required|integer',
             'stock' => 'required|integer',
             'category_id' => 'required'
-            // 'image' => 'required|image|mimes:png,jpg,jpeg'
         ]);
-        // $filename = time() . '.' . $request->image->extension();
-        // $request->image->storeAs('public/products', $filename);
-        // $data = $request->all();
 
         $product = new \App\Models\Product;
         $product->name = $request->name;
         $product->price = (int) $request->price;
         $product->stock = (int) $request->stock;
         $product->category_id = $request->category_id;
-        // $product->image = $filename;
+
         if ($request->hasFile('image')) {
             $filename = time() . '.' . $request->image->extension();
-            $request->image->storeAs('public/products', $filename);
+            // Upload langsung ke public/products
+            $request->image->move(public_path('products'), $filename);
             $product->image = $filename;
         } else {
-            $product->image = env('APP_URL') . '/img/roar-logo.png'; // Path relatif ke gambar default
+            $product->image = 'roar-logo.png'; // Nama file gambar default di public/img/
         }
+
         $product->save();
 
         return redirect()->route('product.index')->with('success', 'Product successfully created');
@@ -63,6 +87,49 @@ class ProductController extends Controller
         return view('pages.products.edit', compact('product', 'categories'));
     }
 
+    // public function update(Request $request, $id)
+    // {
+    //     $request->validate([
+    //         'name' => 'required',
+    //         'price' => 'required|numeric',
+    //         'stock' => 'required|numeric',
+    //         'category_id' => 'required',
+    //     ]);
+    //     // dd($request->all());
+    //     $product = Product::find($id);
+    //     $product->name = $request->name;
+    //     $product->price = $request->price;
+    //     $product->category_id = $request->category_id;
+    //     $product->stock = $request->stock;
+
+
+    //     if ($request->hasFile('image'))  {
+    //         // dd($product->image);
+
+    //         // if ($request->hasFile('image')) {
+
+    //             // Hapus gambar lama jika ada
+    //             Storage::delete('public/products/' . $product->image);
+    //             $filename = time() . '.' . $request->image->extension();
+    //             $request->image->storeAs('public/products', $filename);
+    //             $product->image = $filename;
+    //         // }
+    //     }
+    //     // if ($request->hasFile('image')) {
+
+    //     //     // Simpan file gambar yang baru diunggah
+    //     //     $filename = time() . '.' . $request->image->extension();
+    //     //     $request->image->storeAs('public/products', $filename);
+    //     //     $product->image = $filename;
+    //     //     // $image = $request->file('image');
+    //     //     // $image->storeAs('public/products', $product->id . '.' . $image->getClientOriginalExtension());
+    //     //     // $product->image = 'storage/products/' . $product->id . '.' . $image->getClientOriginalExtension();
+    //     //     // $product->save();
+    //     // }
+    //     $product->save();
+    //     return redirect()->route('product.index')->with('success', 'Product successfully updated');
+    // }
+
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -71,40 +138,33 @@ class ProductController extends Controller
             'stock' => 'required|numeric',
             'category_id' => 'required',
         ]);
-        // dd($request->all());
+
         $product = Product::find($id);
         $product->name = $request->name;
         $product->price = $request->price;
         $product->category_id = $request->category_id;
         $product->stock = $request->stock;
 
+        if ($request->hasFile('image')) {
+            // Hapus gambar lama (kecuali gambar default)
+            if ($product->image && $product->image != 'roar-logo.png') {
+                $oldImagePath = public_path('products/' . $product->image);
+                if (file_exists($oldImagePath)) {
+                    unlink($oldImagePath);
+                }
+            }
 
-        if ($request->hasFile('image'))  {
-            // dd($product->image);
-
-            // if ($request->hasFile('image')) {
-
-                // Hapus gambar lama jika ada
-                Storage::delete('public/products/' . $product->image);
-                $filename = time() . '.' . $request->image->extension();
-                $request->image->storeAs('public/products', $filename);
-                $product->image = $filename;
-            // }
+            // Upload gambar baru
+            $filename = time() . '.' . $request->image->extension();
+            $request->image->move(public_path('products'), $filename);
+            $product->image = $filename;
         }
-        // if ($request->hasFile('image')) {
 
-        //     // Simpan file gambar yang baru diunggah
-        //     $filename = time() . '.' . $request->image->extension();
-        //     $request->image->storeAs('public/products', $filename);
-        //     $product->image = $filename;
-        //     // $image = $request->file('image');
-        //     // $image->storeAs('public/products', $product->id . '.' . $image->getClientOriginalExtension());
-        //     // $product->image = 'storage/products/' . $product->id . '.' . $image->getClientOriginalExtension();
-        //     // $product->save();
-        // }
         $product->save();
+
         return redirect()->route('product.index')->with('success', 'Product successfully updated');
     }
+
 
     public function destroy($id)
     {
