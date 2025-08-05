@@ -28,12 +28,6 @@ Route::get('/', function () {
     return view('pages.auth.login');
 });
 
-Route::get('/storage-link', function () {
-    // Jalankan perintah artisan storage:link
-    Artisan::call('storage:link');
-    return 'storage:link berhasil dijalankan!';
-});
-
 Route::middleware(['auth'])->group(function () {
 
     Route::get('home', [DashboardController::class, 'index'])->name('home');
