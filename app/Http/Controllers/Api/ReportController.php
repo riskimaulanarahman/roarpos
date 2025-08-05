@@ -33,7 +33,7 @@ class ReportController extends Controller
 
         $query = Order::query()
             ->whereBetween('created_at', [$start_date, $end_date])
-            ->where('status','!=','refund');
+            ->where('status','<>','refund');
 
 
         $orders = $query->get();
