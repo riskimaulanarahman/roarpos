@@ -90,6 +90,7 @@ class ReportController extends Controller
         )
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->whereBetween(DB::raw('DATE(order_items.created_at)'), [$start_date, $end_date])
+            ->whereNull('products.status')
             ->groupBy('products.id', 'products.name', 'products.price')
             ->orderBy('total_quantity', 'desc');
 
