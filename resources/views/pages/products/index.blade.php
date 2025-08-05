@@ -82,7 +82,7 @@
                                                             <img src="{{ $product->image }}" alt="" width="100px"
                                                                 class="img-thumbnail">
                                                         @else
-                                                            <img src="{{ asset('storage/products/' . $product->image) }}"
+                                                            <img src="{{ asset('products/' . $product->image) }}"
                                                                 alt="" width="100px" class="img-thumbnail">
                                                         @endif
                                                     @else
