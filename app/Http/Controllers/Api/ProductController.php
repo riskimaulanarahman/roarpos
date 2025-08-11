@@ -70,9 +70,6 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        // Korelasi log
-        $requestId = (string) Str::uuid();
-
         // 1) VALIDASI (manual supaya bisa dilog kalau gagal)
         $validator = Validator::make($request->all(), [
             'name'        => ['required', 'string', 'min:3', 'max:255'],
@@ -92,7 +89,7 @@ class ProductController extends Controller
         }
 
         try {
-            return DB::transaction(function () use ($request, $requestId) {
+            return DB::transaction(function () use ($request) {
                 // Siapkan folder public/products
                 $productImagePath = public_path('products');
                 if (!file_exists($productImagePath)) {
@@ -132,9 +129,6 @@ class ProductController extends Controller
 
       public function update(Request $request)
     {
-        // Untuk korelasi log
-        $requestId = (string) \Illuminate\Support\Str::uuid();
-
         // 1) VALIDASI (manual supaya bisa log kalau gagal)
         $validator = Validator::make($request->all(), [
             'id'          => ['required', 'integer', 'exists:products,id'],
@@ -155,7 +149,7 @@ class ProductController extends Controller
         }
 
         try {
-            return DB::transaction(function () use ($request, $requestId) {
+            return DB::transaction(function () use ($request) {
                 $product = \App\Models\Product::findOrFail($request->id);
 
                 $product->name        = $request->input('name');
