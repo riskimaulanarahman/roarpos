@@ -38,7 +38,7 @@ class ProductController extends Controller
             'price' => 'required|integer',
             'stock' => 'required|integer',
             'category_id' => 'required',
-            'is_best_seller' => 'required',
+            // 'is_best_seller' => 'required',
             'image' => 'required|image|mimes:png,jpg,jpeg'
         ]);
 
