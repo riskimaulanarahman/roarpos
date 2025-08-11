@@ -83,13 +83,6 @@ class ProductController extends Controller
         ]);
 
         if ($validator->fails()) {
-            Log::warning('Product store validation failed', [
-                'request_id' => $requestId,
-                'user_id'    => optional($request->user())->id,
-                'ip'         => $request->ip(),
-                'errors'     => $validator->errors()->toArray(),
-                'payload'    => $request->only(['name','price','stock','category_id']),
-            ]);
 
             return response()->json([
                 'success' => false,
@@ -122,13 +115,6 @@ class ProductController extends Controller
                     'image'       => $filename,
                 ]);
 
-                Log::info('Product created successfully', [
-                    'request_id' => $requestId,
-                    'user_id'    => optional($request->user())->id,
-                    'ip'         => $request->ip(),
-                    'product_id' => $product->id,
-                ]);
-
                 return response()->json([
                     'success' => true,
                     'message' => 'Product Created',
@@ -136,15 +122,6 @@ class ProductController extends Controller
                 ], 201);
             });
         } catch (Throwable $e) {
-            Log::error('Product store failed', [
-                'request_id' => $requestId,
-                'user_id'    => optional($request->user())->id,
-                'ip'         => $request->ip(),
-                'exception'  => get_class($e),
-                'message'    => $e->getMessage(),
-                'trace'      => $e->getTraceAsString(),
-                'payload'    => $request->only(['name','price','stock','category_id']),
-            ]);
 
             return response()->json([
                 'success' => false,
@@ -169,14 +146,6 @@ class ProductController extends Controller
         ]);
 
         if ($validator->fails()) {
-            // Rekam log validasi gagal
-            Log::warning('Product update validation failed', [
-                'request_id' => $requestId,
-                'user_id'    => optional($request->user())->id,
-                'ip'         => $request->ip(),
-                'errors'     => $validator->errors()->toArray(),
-                'payload'    => $request->only(['id','name','price','stock','category_id']),
-            ]);
 
             return response()->json([
                 'success' => false,
@@ -215,13 +184,6 @@ class ProductController extends Controller
 
                 $product->save();
 
-                Log::info('Product updated successfully', [
-                    'request_id' => $requestId,
-                    'user_id'    => optional($request->user())->id,
-                    'ip'         => $request->ip(),
-                    'product_id' => $product->id,
-                ]);
-
                 return response()->json([
                     'success' => true,
                     'message' => 'Product Updated',
@@ -229,16 +191,6 @@ class ProductController extends Controller
                 ]);
             });
         } catch (Throwable $e) {
-            // Log error tak terduga + stack trace
-            Log::error('Product update failed', [
-                'request_id' => $requestId,
-                'user_id'    => optional($request->user())->id,
-                'ip'         => $request->ip(),
-                'exception'  => get_class($e),
-                'message'    => $e->getMessage(),
-                'trace'      => $e->getTraceAsString(),
-                'payload'    => $request->only(['id','name','price','stock','category_id']),
-            ]);
 
             return response()->json([
                 'success' => false,
