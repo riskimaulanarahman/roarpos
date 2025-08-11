@@ -67,33 +67,120 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, )
+    // public function update(Request $request, )
+    // {
+    //     $request->validate([
+    //         'id' => 'required',
+    //         'name' => 'required',
+    //         'price' => 'required|numeric',
+    //         'stock' => 'required|numeric',
+    //         'category_id' => 'required',
+    //         'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
+    //     ]);
+    //     $product = \App\Models\Product::findOrFail($request->id);
+    //     $product->name = $request->name;
+    //     $$product->price = (int) $request->price;
+    //     $product->category_id = $request->category_id;
+    //     $product->stock = $request->stock;
+    //     if ($request->hasFile('image')) {
+    //         Storage::delete('public/products/' . $product->image);
+    //         $filename = time() . '.' . $request->image->extension();
+    //         $request->image->storeAs('public/products', $filename);
+    //         $product->image = $filename;
+    //     }
+    //     $product->save();
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Product Updated',
+    //         'data' => $product
+    //     ]);
+    // }
+
+    public function update(Request $request)
     {
-        $request->validate([
-            'id' => 'required',
-            'name' => 'required',
-            'price' => 'required|numeric',
-            'stock' => 'required|numeric',
-            'category_id' => 'required',
-            'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
+        // Untuk korelasi log
+        $requestId = (string) \Illuminate\Support\Str::uuid();
+
+        // 1) VALIDASI (manual supaya bisa log kalau gagal)
+        $validator = Validator::make($request->all(), [
+            'id'          => ['required', 'integer', 'exists:products,id'],
+            'name'        => ['required', 'string', 'max:255'],
+            'price'       => ['required', 'numeric'],
+            'stock'       => ['required', 'numeric'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
-        $product = \App\Models\Product::findOrFail($request->id);
-        $product->name = $request->name;
-        $$product->price = (int) $request->price;
-        $product->category_id = $request->category_id;
-        $product->stock = $request->stock;
-        if ($request->hasFile('image')) {
-            Storage::delete('public/products/' . $product->image);
-            $filename = time() . '.' . $request->image->extension();
-            $request->image->storeAs('public/products', $filename);
-            $product->image = $filename;
+
+        if ($validator->fails()) {
+            // Rekam log validasi gagal
+            Log::warning('Product update validation failed', [
+                'request_id' => $requestId,
+                'user_id'    => optional($request->user())->id,
+                'ip'         => $request->ip(),
+                'errors'     => $validator->errors()->toArray(),
+                // Jangan log seluruh payload mentah jika mengandung data sensitif
+                'payload'    => $request->only(['id','name','price','stock','category_id']),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
-        $product->save();
-        return response()->json([
-            'success' => true,
-            'message' => 'Product Updated',
-            'data' => $product
-        ]);
+
+        try {
+            return DB::transaction(function () use ($request, $requestId) {
+                $product = \App\Models\Product::findOrFail($request->id);
+
+                $product->name        = $request->input('name');
+                $product->price       = (int) round($request->input('price')); // rupiah dibulatkan ke int
+                $product->category_id = (int) $request->input('category_id');
+                $product->stock       = (int) $request->input('stock');
+
+                if ($request->hasFile('image')) {
+                    // Hapus file lama jika ada
+                    if (!empty($product->image) && Storage::exists('public/products/'.$product->image)) {
+                        Storage::delete('public/products/'.$product->image);
+                    }
+
+                    $filename = time().'.'.$request->file('image')->extension();
+                    $request->file('image')->storeAs('public/products', $filename);
+                    $product->image = $filename;
+                }
+
+                $product->save();
+
+                Log::info('Product updated successfully', [
+                    'request_id' => $requestId,
+                    'user_id'    => optional($request->user())->id,
+                    'ip'         => $request->ip(),
+                    'product_id' => $product->id,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product Updated',
+                    'data'    => $product,
+                ]);
+            });
+        } catch (Throwable $e) {
+            // Log error tak terduga + stack trace
+            Log::error('Product update failed', [
+                'request_id' => $requestId,
+                'user_id'    => optional($request->user())->id,
+                'ip'         => $request->ip(),
+                'exception'  => get_class($e),
+                'message'    => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+                'payload'    => $request->only(['id','name','price','stock','category_id']),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update product.',
+            ], 500);
+        }
     }
 
     /**
