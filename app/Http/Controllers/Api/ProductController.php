@@ -49,7 +49,7 @@ class ProductController extends Controller
             'price' => $request->price,
             'stock' => $request->stock,
             'category_id' => $request->category_id,
-            'is_best_seller' => $request->is_best_seller,
+            // 'is_best_seller' => $request->is_best_seller,
             'image' => $filename,
             // 'is_favorite' => $request->is_favorite
         ]);
