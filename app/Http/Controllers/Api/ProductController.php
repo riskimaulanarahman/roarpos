@@ -79,7 +79,7 @@ class ProductController extends Controller
         ]);
         $product = \App\Models\Product::findOrFail($request->id);
         $product->name = $request->name;
-        $product->price = $request->price;
+        $$product->price = (int) $request->price;
         $product->category_id = $request->category_id;
         $product->stock = $request->stock;
         if ($request->hasFile('image')) {
