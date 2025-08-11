@@ -31,40 +31,219 @@ class ProductController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required|min:3',
+    //         'price' => 'required|integer',
+    //         'stock' => 'required|integer',
+    //         'category_id' => 'required',
+    //         // 'is_best_seller' => 'required',
+    //         'image' => 'required|image|mimes:png,jpg,jpeg'
+    //     ]);
+
+    //     $filename = time() . '.' . $request->image->extension();
+    //     $request->image->storeAs('public/products', $filename);
+    //     $product = \App\Models\Product::create([
+    //         'name' => $request->name,
+    //         'price' => $request->price,
+    //         'stock' => $request->stock,
+    //         'category_id' => $request->category_id,
+    //         // 'is_best_seller' => $request->is_best_seller,
+    //         'image' => $filename,
+    //         // 'is_favorite' => $request->is_favorite
+    //     ]);
+
+    //     if ($product) {
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Product Created',
+    //             'data' => $product
+    //         ], 201);
+    //     } else {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Product Failed to Save',
+    //         ], 409);
+    //     }
+    // }
+
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|min:3',
-            'price' => 'required|integer',
-            'stock' => 'required|integer',
-            'category_id' => 'required',
-            // 'is_best_seller' => 'required',
-            'image' => 'required|image|mimes:png,jpg,jpeg'
+        // Korelasi log
+        $requestId = (string) Str::uuid();
+
+        // 1) VALIDASI (manual supaya bisa dilog kalau gagal)
+        $validator = Validator::make($request->all(), [
+            'name'        => ['required', 'string', 'min:3', 'max:255'],
+            'price'       => ['required', 'numeric'],
+            'stock'       => ['required', 'numeric'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'image'       => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
 
-        $filename = time() . '.' . $request->image->extension();
-        $request->image->storeAs('public/products', $filename);
-        $product = \App\Models\Product::create([
-            'name' => $request->name,
-            'price' => $request->price,
-            'stock' => $request->stock,
-            'category_id' => $request->category_id,
-            // 'is_best_seller' => $request->is_best_seller,
-            'image' => $filename,
-            // 'is_favorite' => $request->is_favorite
-        ]);
+        if ($validator->fails()) {
+            Log::warning('Product store validation failed', [
+                'request_id' => $requestId,
+                'user_id'    => optional($request->user())->id,
+                'ip'         => $request->ip(),
+                'errors'     => $validator->errors()->toArray(),
+                'payload'    => $request->only(['name','price','stock','category_id']),
+            ]);
 
-        if ($product) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Product Created',
-                'data' => $product
-            ], 201);
-        } else {
             return response()->json([
                 'success' => false,
-                'message' => 'Product Failed to Save',
-            ], 409);
+                'message' => 'Validation error',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            return DB::transaction(function () use ($request, $requestId) {
+                // Siapkan folder public/products
+                $productImagePath = public_path('products');
+                if (!file_exists($productImagePath)) {
+                    mkdir($productImagePath, 0777, true);
+                }
+
+                // Simpan file gambar ke public/products
+                $filename = null;
+                if ($request->hasFile('image')) {
+                    $filename = time() . '.' . $request->file('image')->extension();
+                    $request->file('image')->move($productImagePath, $filename);
+                }
+
+                // Buat produk
+                $product = \App\Models\Product::create([
+                    'name'        => $request->input('name'),
+                    'price'       => (int) round($request->input('price')),
+                    'stock'       => (int) $request->input('stock'),
+                    'category_id' => (int) $request->input('category_id'),
+                    'image'       => $filename,
+                ]);
+
+                Log::info('Product created successfully', [
+                    'request_id' => $requestId,
+                    'user_id'    => optional($request->user())->id,
+                    'ip'         => $request->ip(),
+                    'product_id' => $product->id,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product Created',
+                    'data'    => $product,
+                ], 201);
+            });
+        } catch (Throwable $e) {
+            Log::error('Product store failed', [
+                'request_id' => $requestId,
+                'user_id'    => optional($request->user())->id,
+                'ip'         => $request->ip(),
+                'exception'  => get_class($e),
+                'message'    => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+                'payload'    => $request->only(['name','price','stock','category_id']),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create product.',
+            ], 500);
+        }
+    }
+
+      public function update(Request $request)
+    {
+        // Untuk korelasi log
+        $requestId = (string) \Illuminate\Support\Str::uuid();
+
+        // 1) VALIDASI (manual supaya bisa log kalau gagal)
+        $validator = Validator::make($request->all(), [
+            'id'          => ['required', 'integer', 'exists:products,id'],
+            'name'        => ['required', 'string', 'max:255'],
+            'price'       => ['required', 'numeric'],
+            'stock'       => ['required', 'numeric'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
+        ]);
+
+        if ($validator->fails()) {
+            // Rekam log validasi gagal
+            Log::warning('Product update validation failed', [
+                'request_id' => $requestId,
+                'user_id'    => optional($request->user())->id,
+                'ip'         => $request->ip(),
+                'errors'     => $validator->errors()->toArray(),
+                'payload'    => $request->only(['id','name','price','stock','category_id']),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            return DB::transaction(function () use ($request, $requestId) {
+                $product = \App\Models\Product::findOrFail($request->id);
+
+                $product->name        = $request->input('name');
+                $product->price       = (int) round($request->input('price'));
+                $product->category_id = (int) $request->input('category_id');
+                $product->stock       = (int) $request->input('stock');
+
+                if ($request->hasFile('image')) {
+                    $productImagePath = public_path('products');
+
+                    // Pastikan folder public/products ada
+                    if (!file_exists($productImagePath)) {
+                        mkdir($productImagePath, 0777, true);
+                    }
+
+                    // Hapus file lama jika ada
+                    if (!empty($product->image) && file_exists($productImagePath . '/' . $product->image)) {
+                        unlink($productImagePath . '/' . $product->image);
+                    }
+
+                    // Simpan file baru langsung ke public/products
+                    $filename = time() . '.' . $request->file('image')->extension();
+                    $request->file('image')->move($productImagePath, $filename);
+                    $product->image = $filename;
+                }
+
+                $product->save();
+
+                Log::info('Product updated successfully', [
+                    'request_id' => $requestId,
+                    'user_id'    => optional($request->user())->id,
+                    'ip'         => $request->ip(),
+                    'product_id' => $product->id,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product Updated',
+                    'data'    => $product,
+                ]);
+            });
+        } catch (Throwable $e) {
+            // Log error tak terduga + stack trace
+            Log::error('Product update failed', [
+                'request_id' => $requestId,
+                'user_id'    => optional($request->user())->id,
+                'ip'         => $request->ip(),
+                'exception'  => get_class($e),
+                'message'    => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+                'payload'    => $request->only(['id','name','price','stock','category_id']),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update product.',
+            ], 500);
         }
     }
 
@@ -187,99 +366,7 @@ class ProductController extends Controller
     //     }
     // }
 
-    public function update(Request $request)
-    {
-        // Untuk korelasi log
-        $requestId = (string) \Illuminate\Support\Str::uuid();
-
-        // 1) VALIDASI (manual supaya bisa log kalau gagal)
-        $validator = Validator::make($request->all(), [
-            'id'          => ['required', 'integer', 'exists:products,id'],
-            'name'        => ['required', 'string', 'max:255'],
-            'price'       => ['required', 'numeric'],
-            'stock'       => ['required', 'numeric'],
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
-            'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
-        ]);
-
-        if ($validator->fails()) {
-            // Rekam log validasi gagal
-            Log::warning('Product update validation failed', [
-                'request_id' => $requestId,
-                'user_id'    => optional($request->user())->id,
-                'ip'         => $request->ip(),
-                'errors'     => $validator->errors()->toArray(),
-                'payload'    => $request->only(['id','name','price','stock','category_id']),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
-
-        try {
-            return DB::transaction(function () use ($request, $requestId) {
-                $product = \App\Models\Product::findOrFail($request->id);
-
-                $product->name        = $request->input('name');
-                $product->price       = (int) round($request->input('price'));
-                $product->category_id = (int) $request->input('category_id');
-                $product->stock       = (int) $request->input('stock');
-
-                if ($request->hasFile('image')) {
-                    $productImagePath = public_path('products');
-
-                    // Pastikan folder public/products ada
-                    if (!file_exists($productImagePath)) {
-                        mkdir($productImagePath, 0777, true);
-                    }
-
-                    // Hapus file lama jika ada
-                    if (!empty($product->image) && file_exists($productImagePath . '/' . $product->image)) {
-                        unlink($productImagePath . '/' . $product->image);
-                    }
-
-                    // Simpan file baru langsung ke public/products
-                    $filename = time() . '.' . $request->file('image')->extension();
-                    $request->file('image')->move($productImagePath, $filename);
-                    $product->image = $filename;
-                }
-
-                $product->save();
-
-                Log::info('Product updated successfully', [
-                    'request_id' => $requestId,
-                    'user_id'    => optional($request->user())->id,
-                    'ip'         => $request->ip(),
-                    'product_id' => $product->id,
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Product Updated',
-                    'data'    => $product,
-                ]);
-            });
-        } catch (Throwable $e) {
-            // Log error tak terduga + stack trace
-            Log::error('Product update failed', [
-                'request_id' => $requestId,
-                'user_id'    => optional($request->user())->id,
-                'ip'         => $request->ip(),
-                'exception'  => get_class($e),
-                'message'    => $e->getMessage(),
-                'trace'      => $e->getTraceAsString(),
-                'payload'    => $request->only(['id','name','price','stock','category_id']),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update product.',
-            ], 500);
-        }
-    }
+  
 
 
     /**
