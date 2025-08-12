@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Throwable;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Database\QueryException;
 
 class ProductController extends Controller
 {
@@ -318,14 +320,68 @@ class ProductController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    // public function destroy($id)
+    // {
+    //     $product = \App\Models\Product::findOrFail($id);
+
+    //     // Path untuk folder public langsung
+    //     $publicPath = public_path('products/' . $product->image);
+
+    //     // Kalau tidak ada di storage, coba hapus dari public
+    //     if (File::exists($publicPath)) {
+    //         File::delete($publicPath);
+    //     }
+
+    //     // Hapus data produk di database
+    //     $product->delete();
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'message' => 'Product Deleted',
+    //     ]);
+    // }
+
+    public function destroy($id): JsonResponse
     {
         $product = \App\Models\Product::findOrFail($id);
-        Storage::delete('public/products/' . $product->image);
-        $product->delete();
-        return response()->json([
-            'success' => true,
-            'message' => 'Product Deleted',
-        ]);
+
+        // ==== (Opsional) Cek relasi lebih dulu biar pesan user-friendly ====
+        // Sesuaikan nama relasi dengan model kamu, misal: orderItems(), salesItems(), dsb.
+        if (method_exists($product, 'orderItems') && $product->orderItems()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Produk tidak bisa dihapus karena sudah memiliki transaksi.',
+            ], 409); // 409 Conflict
+        }
+
+        // Path untuk folder public langsung (jika file disimpan di public/products)
+        $publicPath = public_path('products/' . $product->image);
+        if ($product->image && File::exists($publicPath)) {
+            File::delete($publicPath);
+        }
+
+        try {
+            $product->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Product Deleted',
+            ]);
+        } catch (QueryException $e) {
+            // Tangkap pelanggaran integritas referensial (FK)
+            // Kode SQLSTATE pelanggaran FK biasanya 23000
+            if ((string) $e->getCode() === '23000') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Produk tidak bisa dihapus karena sudah memiliki transaksi.',
+                ], 409);
+            }
+
+            // Selain itu, lempar balik atau kembalikan pesan umum
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menghapus produk.',
+            ], 500);
+        }
     }
 }
