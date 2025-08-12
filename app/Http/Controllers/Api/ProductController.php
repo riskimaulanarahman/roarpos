@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Throwable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\File;
 
 class ProductController extends Controller
 {
