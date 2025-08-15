@@ -26,7 +26,7 @@ class OrderController extends Controller
             }),
             'total_item' => collect($validatedData['items'])->sum('quantity'),
             'payment_method' => $request->input('payment_method', 'cash'), // Default to 'cash' if not provided
-            'nominal_bayar' => collect($validatedData['items'])->sum('quantity')
+            'nominal_bayar' => $request->input('nominal_bayar'),
         ]);
 
         foreach ($validatedData['items'] as $item) {
