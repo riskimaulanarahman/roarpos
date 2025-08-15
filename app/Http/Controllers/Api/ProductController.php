@@ -19,9 +19,14 @@ class ProductController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {
+    {   
+        // Ambil user_id dari user yang sedang login
+        $userId = auth()->id();
         //all products
-        $products = \App\Models\Product::with('category')->orderBy('is_best_seller', 'desc')->get();
+        $products = \App\Models\Product::with('category')
+            ->where('user_id', $userId)
+            ->orderBy('is_best_seller', 'desc')
+            ->get();
         //load category
         $products->load('category');
         return response()->json([
@@ -30,46 +35,6 @@ class ProductController extends Controller
             'data' => $products
         ], 200);
     }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    // public function store(Request $request)
-    // {
-    //     $request->validate([
-    //         'name' => 'required|min:3',
-    //         'price' => 'required|integer',
-    //         'stock' => 'required|integer',
-    //         'category_id' => 'required',
-    //         // 'is_best_seller' => 'required',
-    //         'image' => 'required|image|mimes:png,jpg,jpeg'
-    //     ]);
-
-    //     $filename = time() . '.' . $request->image->extension();
-    //     $request->image->storeAs('public/products', $filename);
-    //     $product = \App\Models\Product::create([
-    //         'name' => $request->name,
-    //         'price' => $request->price,
-    //         'stock' => $request->stock,
-    //         'category_id' => $request->category_id,
-    //         // 'is_best_seller' => $request->is_best_seller,
-    //         'image' => $filename,
-    //         // 'is_favorite' => $request->is_favorite
-    //     ]);
-
-    //     if ($product) {
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Product Created',
-    //             'data' => $product
-    //         ], 201);
-    //     } else {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Product Failed to Save',
-    //         ], 409);
-    //     }
-    // }
 
     public function store(Request $request)
     {
@@ -81,6 +46,9 @@ class ProductController extends Controller
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
+
+        // Ambil user_id dari user yang sedang login
+        $userId = auth()->id();
 
         if ($validator->fails()) {
 
@@ -108,6 +76,7 @@ class ProductController extends Controller
 
                 // Buat produk
                 $product = \App\Models\Product::create([
+                    'user_id'        => $userId,
                     'name'        => $request->input('name'),
                     'price'       => (int) round($request->input('price')),
                     'stock'       => (int) $request->input('stock'),

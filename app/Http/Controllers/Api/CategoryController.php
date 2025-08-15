@@ -11,7 +11,12 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = \App\Models\Category::all();
+        // Ambil user_id dari user yang sedang login
+        $userId = auth()->id();
+
+        $categories = \App\Models\Category::where('user_id',$userId)
+            ->orderBy('name', 'asc')
+            ->get();
         return response()->json([
             'status' => 'success',
             'data' => $categories
@@ -36,7 +41,11 @@ class CategoryController extends Controller
             'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
         ]);
 
+        // Ambil user_id dari user yang sedang login
+        $userId = auth()->id();
+
         $category = new Category();
+        $category->user_id = $userId;
         $category->name = $request->name;
 
         if ($request->hasFile('image')) {
