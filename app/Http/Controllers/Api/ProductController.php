@@ -48,7 +48,6 @@ class ProductController extends Controller
         ]);
 
         // Ambil user_id dari user yang sedang login
-        $userId = auth()->id();
 
         if ($validator->fails()) {
 
@@ -66,6 +65,8 @@ class ProductController extends Controller
                 if (!file_exists($productImagePath)) {
                     mkdir($productImagePath, 0777, true);
                 }
+                
+                $userId = auth()->id();
 
                 // Simpan file gambar ke public/products
                 $filename = null;
@@ -76,7 +77,7 @@ class ProductController extends Controller
 
                 // Buat produk
                 $product = \App\Models\Product::create([
-                    'user_id'        => $userId,
+                    'user_id'     => $userId,
                     'name'        => $request->input('name'),
                     'price'       => (int) round($request->input('price')),
                     'stock'       => (int) $request->input('stock'),
