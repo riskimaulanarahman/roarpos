@@ -18,7 +18,10 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
+        $userId = auth()->id();
+
         $order = \App\Models\Order::create([
+            'user_id' => $userId,
             'transaction_number' => 'TRX-' . strtoupper(uniqid()),
             'cashier_id' => $validatedData['cashier_id'],
             'total_price' => collect($validatedData['items'])->sum(function ($item) {
@@ -88,8 +91,9 @@ class OrderController extends Controller
 
     public function getAllOrder()
     {
+        $userId = auth()->id();
         // get all order in order items include product sorted by created_at
-        $order = Order::with('orderItems.product')->orderBy('created_at', 'desc')->get();
+        $order = Order::with('orderItems.product')->where('user_id',$userId)->orderBy('created_at', 'desc')->get();
 
         return response()->json([
             'status' => 'success',
