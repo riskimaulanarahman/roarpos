@@ -26,6 +26,7 @@ class OrderController extends Controller
             }),
             'total_item' => collect($validatedData['items'])->sum('quantity'),
             'payment_method' => $request->input('payment_method', 'cash'), // Default to 'cash' if not provided
+            'nominal_bayar' => $request->input('nominal_bayar'),
         ]);
 
         foreach ($validatedData['items'] as $item) {
@@ -36,12 +37,12 @@ class OrderController extends Controller
             ]);
         }
 
-        \Log::info([
-            'raw_created_at' => $order->getRawOriginal('created_at'),
-            'eloquent_created_at' => (string) $order->created_at,
-            'timezone_app' => config('app.timezone'),
-            'php_timezone' => date_default_timezone_get(),
-        ]);
+        // \Log::info([
+        //     'raw_created_at' => $order->getRawOriginal('created_at'),
+        //     'eloquent_created_at' => (string) $order->created_at,
+        //     'timezone_app' => config('app.timezone'),
+        //     'php_timezone' => date_default_timezone_get(),
+        // ]);
 
         return response()->json([
             'message' => 'Order created successfully',
