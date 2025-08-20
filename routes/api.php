@@ -19,6 +19,13 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register']);
+Route::post('/email/resend', [\App\Http\Controllers\Api\AuthController::class, 'resendVerification']);
+
+Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Api\AuthController::class, 'verify'])
+    ->name('api.verification.verify')
+    ->middleware(['signed', 'throttle:6,1']); // validasi signature & rate limit
+
 // post login
 Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
 
