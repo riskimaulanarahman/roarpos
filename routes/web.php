@@ -28,12 +28,7 @@ Route::get('/', function () {
     return view('pages.auth.login');
 });
 
-Route::middleware(['auth'])->group(function () {
-
-    Route::get('home', [DashboardController::class, 'index'])->name('home');
-    Route::get('home/filter', [DashboardController::class, 'filter'])->name('dashboard_grafik.filter');
-
-    Route::get('/run-worker', function () {
+Route::get('/run-worker', function () {
     try {
         Artisan::call('queue:work', [
             '--stop-when-empty' => true, // langsung berhenti kalau kosong
@@ -45,6 +40,13 @@ Route::middleware(['auth'])->group(function () {
         return response('Error: ' . $e->getMessage(), 500);
     }
 });
+
+Route::middleware(['auth'])->group(function () {
+
+    Route::get('home', [DashboardController::class, 'index'])->name('home');
+    Route::get('home/filter', [DashboardController::class, 'filter'])->name('dashboard_grafik.filter');
+
+    
 
     Route::resource('user', UserController::class);
     Route::resource('product', \App\Http\Controllers\ProductController::class);
