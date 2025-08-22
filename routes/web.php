@@ -33,6 +33,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('home', [DashboardController::class, 'index'])->name('home');
     Route::get('home/filter', [DashboardController::class, 'filter'])->name('dashboard_grafik.filter');
 
+    Route::get('/run-worker', function () {
+    try {
+        Artisan::call('queue:work', [
+            '--stop-when-empty' => true, // langsung berhenti kalau kosong
+            '--queue' => 'mail',
+        ]);
+
+        return response('Executed 1 job from queue.', 200);
+    } catch (\Exception $e) {
+        return response('Error: ' . $e->getMessage(), 500);
+    }
+});
+
     Route::resource('user', UserController::class);
     Route::resource('product', \App\Http\Controllers\ProductController::class);
     Route::resource('order', \App\Http\Controllers\OrderController::class);

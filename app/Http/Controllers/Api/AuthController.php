@@ -15,46 +15,41 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
+    // public function register(Request $request)
+    // {
+    //     $data = $request->validate([
+    //         'store_name' => ['required', 'string', 'max:255'],
+    //         'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
+    //         'phone'      => ['required', 'string', 'max:50', 'unique:users,phone'],
+    //         'password'   => ['required', 'string', 'min:6', 'max:255'],
+    //     ]);
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
+    //     try {
+    //         DB::transaction(function () use ($data) {
+    //             $user = User::create([
+    //                 'name'        => $data['store_name'],
+    //                 'store_name'  => $data['store_name'],
+    //                 'email'       => $data['email'],
+    //                 'phone'       => $data['phone'],
+    //                 'password'    => Hash::make($data['password']),
+    //             ]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
+    //             // Kirim verifikasi SECARA SINKRON agar kalau gagal -> throw -> rollback
+    //             // (JANGAN di-queue di step registrasi)
+    //             $user->notifyNow(new CustomVerifyEmail);
+    //         });
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
+    //         return response()->json([
+    //             'message' => 'Registrasi berhasil. Silakan cek email untuk aktivasi akun.',
+    //         ], 201);
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
-
+    //     } catch (Throwable $e) {
+    //         Log::error('Register gagal (rollback): '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+    //         return response()->json([
+    //             'message' => 'Registrasi gagal. Silakan coba lagi.',
+    //         ], 500);
+    //     }
+    // }
     public function register(Request $request)
     {
         $data = $request->validate([
@@ -65,7 +60,9 @@ class AuthController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($data) {
+            $user = null;
+
+            DB::transaction(function () use ($data, &$user) {
                 $user = User::create([
                     'name'        => $data['store_name'],
                     'store_name'  => $data['store_name'],
@@ -73,18 +70,21 @@ class AuthController extends Controller
                     'phone'       => $data['phone'],
                     'password'    => Hash::make($data['password']),
                 ]);
-
-                // Kirim verifikasi SECARA SINKRON agar kalau gagal -> throw -> rollback
-                // (JANGAN di-queue di step registrasi)
-                $user->notifyNow(new CustomVerifyEmail);
             });
+
+            // ⬇️ Kirim SETELAH commit + via queue
+            $user->notify(
+                (new \App\Notifications\CustomVerifyEmail)
+                    ->afterCommit()
+                    ->onQueue('mail')
+            );
 
             return response()->json([
                 'message' => 'Registrasi berhasil. Silakan cek email untuk aktivasi akun.',
             ], 201);
 
-        } catch (Throwable $e) {
-            Log::error('Register gagal (rollback): '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        } catch (\Throwable $e) {
+            \Log::error('Register gagal: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'message' => 'Registrasi gagal. Silakan coba lagi.',
             ], 500);
@@ -170,7 +170,6 @@ class AuthController extends Controller
             ], 500);
         }
     }
-
 
     // LOGIN Anda (pastikan cek verified)
     public function login(Request $request)
