@@ -50,14 +50,76 @@ class AuthController extends Controller
     //         ], 500);
     //     }
     // }
+    // public function register(Request $request)
+    // {
+    //     $data = $request->validate([
+    //         'store_name' => ['required', 'string', 'max:255'],
+    //         'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
+    //         'phone'      => ['required', 'string', 'max:50', 'unique:users,phone'],
+    //         'password'   => ['required', 'string', 'min:6', 'max:255'],
+    //     ]);
+
+    //     try {
+    //         $user = null;
+
+    //         DB::transaction(function () use ($data, &$user) {
+    //             $user = User::create([
+    //                 'name'        => $data['store_name'],
+    //                 'store_name'  => $data['store_name'],
+    //                 'email'       => $data['email'],
+    //                 'phone'       => $data['phone'],
+    //                 'password'    => Hash::make($data['password']),
+    //             ]);
+    //         });
+
+    //         // ⬇️ Kirim SETELAH commit + via queue
+    //         $user->notify(
+    //             (new \App\Notifications\CustomVerifyEmail)
+    //                 ->afterCommit()
+    //                 ->onQueue('mail')
+    //         );
+
+    //         return response()->json([
+    //             'message' => 'Registrasi berhasil. Silakan cek email untuk aktivasi akun.',
+    //         ], 201);
+
+    //     } catch (\Throwable $e) {
+    //         \Log::error('Register gagal: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+    //         return response()->json([
+    //             'message' => 'Registrasi gagal. Silakan coba lagi.',
+    //         ], 500);
+    //     }
+    // }
+
     public function register(Request $request)
     {
+        $messages = [
+            'store_name.required' => 'Nama toko wajib diisi.',
+            'store_name.string'   => 'Nama toko harus berupa teks.',
+            'store_name.max'      => 'Nama toko maksimal 255 karakter.',
+
+            'email.required'      => 'Email wajib diisi.',
+            'email.email'         => 'Format email tidak valid.',
+            'email.max'           => 'Email maksimal 255 karakter.',
+            'email.unique'        => 'Email sudah terdaftar.',
+
+            'phone.required'      => 'Nomor telepon wajib diisi.',
+            'phone.string'        => 'Nomor telepon harus berupa teks.',
+            'phone.max'           => 'Nomor telepon maksimal 50 karakter.',
+            'phone.unique'        => 'Nomor telepon sudah terdaftar.',
+
+            'password.required'   => 'Kata sandi wajib diisi.',
+            'password.string'     => 'Kata sandi harus berupa teks.',
+            'password.min'        => 'Kata sandi minimal 6 karakter.',
+            'password.max'        => 'Kata sandi maksimal 255 karakter.',
+        ];
+
         $data = $request->validate([
             'store_name' => ['required', 'string', 'max:255'],
             'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone'      => ['required', 'string', 'max:50', 'unique:users,phone'],
             'password'   => ['required', 'string', 'min:6', 'max:255'],
-        ]);
+        ], $messages);
 
         try {
             $user = null;
@@ -72,7 +134,6 @@ class AuthController extends Controller
                 ]);
             });
 
-            // ⬇️ Kirim SETELAH commit + via queue
             $user->notify(
                 (new \App\Notifications\CustomVerifyEmail)
                     ->afterCommit()
@@ -90,6 +151,7 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
 
     public function verify(Request $request, $id, $hash)
     {
@@ -185,7 +247,7 @@ class AuthController extends Controller
         }
 
         if (! $user->hasVerifiedEmail()) {
-            return response()->json(['message' => ['Email belum terverifikasi. Cek email Anda.']], 403);
+            return response()->json(['message' => 'Email belum terverifikasi. Cek email Anda.'], 403);
         }
 
         if (! \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
