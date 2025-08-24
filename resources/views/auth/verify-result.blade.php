@@ -42,10 +42,6 @@
               <div class="emoji-badge" aria-hidden="true">{{ $alert['icon'] }}</div>
               <div>
                 <h1 class="h4 mb-1">{{ $title }}</h1>
-                <p class="text-secondary mb-0">{{ $message }}</p>
-                @if(!is_null($code))
-                  <small class="text-muted d-block mt-1">Kode status: {{ $code }}</small>
-                @endif
               </div>
             </div>
 

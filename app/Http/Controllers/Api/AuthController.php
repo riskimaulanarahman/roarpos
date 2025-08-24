@@ -210,8 +210,6 @@ class AuthController extends Controller
                 return response()->view('auth.verify-result', [
                     'status'  => 'expired',
                     'title'   => 'Link Kadaluarsa',
-                    'message' => 'Maaf, link verifikasi kamu sudah kadaluarsa. Silakan minta link verifikasi baru.',
-                    'code'    => 410,
                     // optional: kirim id/email untuk memudahkan form kirim ulang
                     'prefillEmail' => $request->query('email'),
                 ], 410);
@@ -226,8 +224,6 @@ class AuthController extends Controller
                 return response()->view('auth.verify-result', [
                     'status'  => 'invalid',
                     'title'   => 'Link Tidak Valid',
-                    'message' => 'Maaf, link verifikasi tidak valid atau sudah diubah.',
-                    'code'    => 400,
                 ], 400);
             }
 
@@ -241,8 +237,6 @@ class AuthController extends Controller
                 return response()->view('auth.verify-result', [
                     'status'  => 'invalid',
                     'title'   => 'Link Tidak Valid',
-                    'message' => 'Maaf, link verifikasi tidak valid.',
-                    'code'    => 400,
                 ], 400);
             }
 
@@ -258,8 +252,6 @@ class AuthController extends Controller
                 return response()->view('auth.verify-result', [
                     'status'  => 'already_verified',
                     'title'   => 'Sudah Terverifikasi',
-                    'message' => 'Email kamu sudah terverifikasi. Kamu bisa langsung login.',
-                    'code'    => 200,
                 ]);
             }
 
@@ -280,8 +272,6 @@ class AuthController extends Controller
             return response()->view('auth.verify-result', [
                 'status'  => 'verified',
                 'title'   => 'Berhasil Diverifikasi!',
-                'message' => 'Terima kasih 🙌 Email kamu sudah aktif. Silakan login untuk melanjutkan.',
-                'code'    => 200,
             ]);
 
         } catch (Throwable $e) {
@@ -294,8 +284,6 @@ class AuthController extends Controller
             return response()->view('auth.verify-result', [
                 'status'  => 'error',
                 'title'   => 'Terjadi Kesalahan',
-                'message' => 'Maaf, ada kendala saat memproses verifikasi. Coba beberapa saat lagi.',
-                'code'    => 500,
             ], 500);
         }
     }
