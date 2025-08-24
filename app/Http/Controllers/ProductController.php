@@ -13,10 +13,11 @@ class ProductController extends Controller
     {
         $userId = auth()->id();
 
-        $products = Product::with('category')->when($request->input('name'), function ($query, $name, $userId) {
-            return $query->where('name', 'like', '%' . $name . '%')->where('user_id', $userId);
+        $products = Product::with('category')->when($request->input('name'), function ($query, $name) {
+            return $query->where('name', 'like', '%' . $name . '%');
         })
         ->orderBy('created_at', 'desc')
+        ->where('user_id', $userId)
         ->paginate(10);
 
         return view('pages.products.index', compact('products'));
