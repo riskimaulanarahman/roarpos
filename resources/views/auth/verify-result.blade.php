@@ -70,7 +70,7 @@
           </div>
 
           <div class="card-footer bg-light text-muted small text-center">
-            Jika ini bukan kamu, abaikan halaman ini. &middot; &copy; {{ date('Y') }} • Aplikasi Kamu
+            Jika ini bukan kamu, abaikan halaman ini. &middot; &copy; {{ date('Y') }} • TOGA POS
           </div>
         </div>
       </div>
