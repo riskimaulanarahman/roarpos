@@ -15,8 +15,6 @@
                 <h1>Dashboard - CASHIER POS</h1>
             </div>
             <div class="row">
-                {{-- === USERS (ADMIN ONLY) === --}}
-                @if(Auth::check() && Auth::user()->roles === 'admin')
                 <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                     <a href="{{ route('user.index') }}">
                         <div class="card card-statistic-1">
@@ -34,9 +32,6 @@
                         </div>
                     </a>
                 </div>
-                @endif
-
-                {{-- === PRODUCT (semua user) === --}}
                 <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                     <a href="{{ route('product.index') }}">
                         <div class="card card-statistic-1">
@@ -55,7 +50,6 @@
                     </a>
                 </div>
 
-                {{-- === CATEGORY (semua user) === --}}
                 <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                     <a href="{{ route('category.index') }}">
                         <div class="card card-statistic-1">
@@ -73,9 +67,6 @@
                         </div>
                     </a>
                 </div>
-
-                {{-- === DISCOUNTS (ADMIN ONLY) === --}}
-                @if(Auth::check() && Auth::user()->roles === 'admin')
                 <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                     <a href="{{ route('discount.index') }}">
                         <div class="card card-statistic-1">
@@ -93,10 +84,7 @@
                         </div>
                     </a>
                 </div>
-                @endif
-
-                {{-- === ADDITIONAL CHARGES (ADMIN ONLY) === --}}
-                @if(Auth::check() && Auth::user()->roles === 'admin')
+                <!-- Additional Charges Card -->
                 <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                     <a href="{{ route('additional_charge.index') }}">
                         <div class="card card-statistic-1">
@@ -114,9 +102,6 @@
                         </div>
                     </a>
                 </div>
-                @endif
-
-                {{-- === ORDERS (semua user) === --}}
                 <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                     <a href="{{ route('order.index') }}">
                         <div class="card card-statistic-1">
@@ -134,8 +119,6 @@
                         </div>
                     </a>
                 </div>
-
-                {{-- === REPORT (tetap seperti semula; jika perlu khusus admin, tinggal bungkus @if admin) === --}}
                 <div class="col-lg-3 col-md-6 col-sm-6 col-12">
                     <a href="{{ route('report.index') }}">
                         <div class="card card-statistic-1">
@@ -154,8 +137,6 @@
                     </a>
                 </div>
             </div>
-
-            {{-- === TABEL SALES HARI INI (semua user) === --}}
             <div>
                 <div class="col-12">
                     <div class="card card-statistic-1">
@@ -180,16 +161,30 @@
                                 </tr>
                                 @foreach ($orders as $order)
                                     <tr>
-                                        <td>
-                                            <a href="{{ route('order.show', $order->id) }}">{{ $order->transaction_time }}</a>
+                                        <td><a
+                                                href="{{ route('order.show', $order->id) }}">{{ $order->transaction_time }}</a>
                                         </td>
-                                        <td>{{ number_format($order->sub_total, 0, ',', '.') }}</td>
-                                        <td>{{ number_format($order->discount_amount, 0, ',', '.') }}</td>
-                                        <td>{{ number_format($order->tax, 0, ',', '.') }}</td>
-                                        <td>{{ number_format($order->service_charge, 0, ',', '.') }}</td>
-                                        <td>{{ number_format($order->total_price, 0, ',', '.') }}</td>
-                                        <td>{{ $order->total_item }}</td>
-                                        <td>{{ $order->user->name }}</td>
+                                        <td>
+                                            {{ number_format($order->sub_total, 0, ',', '.') }}
+                                        </td>
+                                        <td>
+                                            {{ number_format($order->discount_amount, 0, ',', '.') }}
+                                        </td>
+                                        <td>
+                                            {{ number_format($order->tax, 0, ',', '.') }}
+                                        </td>
+                                        <td>
+                                            {{ number_format($order->service_charge, 0, ',', '.') }}
+                                        </td>
+                                        <td>
+                                            {{ number_format($order->total_price, 0, ',', '.') }}
+                                        </td>
+                                        <td>
+                                            {{ $order->total_item }}
+                                        </td>
+                                        <td>
+                                            {{ $order->user->name }}
+                                        </td>
                                     </tr>
                                 @endforeach
                             </table>
@@ -197,11 +192,10 @@
                         <div class="float-right">
                             {{ $orders->withQueryString()->links() }}
                         </div>
+
                     </div>
                 </div>
             </div>
-
-            {{-- === GRAFIK SALES (semua user) === --}}
             <div>
                 <div class="row mt-4">
                     <div class="col-12">
@@ -265,12 +259,16 @@
                                     </div>
                                 </div>
 
-                            </div> {{-- card-body --}}
-                        </div> {{-- card --}}
-                    </div> {{-- col-12 --}}
-                </div> {{-- row --}}
+
+                        </div>
+                    </div>
+                </div>
+
             </div>
-        </section>
+    </div>
+
+
+    </section>
     </div>
 @endsection
 
