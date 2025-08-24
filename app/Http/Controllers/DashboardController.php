@@ -19,8 +19,8 @@ class DashboardController extends Controller
         $products = Product::where('user_id', $userId)->count();
         $ordersLength = Order::where('user_id', $userId)->count();
         $categories = Category::where('user_id', $userId)->count();
-        $discounts= Discount::count();
-        $additional_charges = \App\Models\AdditionalCharges::where('user_id', $userId)->count();
+        // $discounts= Discount::count();
+        // $additional_charges = \App\Models\AdditionalCharges::where('user_id', $userId)->count();
 
         $orders = Order::with('user')
             ->where('user_id', $userId)
@@ -42,8 +42,8 @@ class DashboardController extends Controller
             'products',
             'ordersLength',
             'categories',
-            'discounts',
-            'additional_charges',
+            // 'discounts',
+            // 'additional_charges',
             'orders',
             'totalPriceToday',
             'data',
