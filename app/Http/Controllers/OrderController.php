@@ -11,8 +11,10 @@ class OrderController extends Controller
     //index
     public function index()
     {
+        $userId = auth()->id();
+
         // get all order data from orders table and paginate it by 10 items per page
-        $orders = Order::with('user')->orderBy('created_at', 'DESC')->paginate(10);
+        $orders = Order::with('user')->orderBy('created_at', 'DESC')->where('user_id',$userId)->paginate(10);
         return view('pages.orders.index', compact('orders'));
     }
 

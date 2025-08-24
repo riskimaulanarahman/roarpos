@@ -66,9 +66,9 @@
 
                                             <th>Transaction Time</th>
                                             <th>Sub Total</th>
-                                            <th>Discount</th>
+                                            {{-- <th>Discount</th>
                                             <th>Tax</th>
-                                            <th>Service</th>
+                                            <th>Service</th> --}}
                                             <th>Total Price</th>
                                             <th>Total Item</th>
                                             <th>Kasir</th>
@@ -82,7 +82,7 @@
                                                 <td>
                                                     {{ number_format($order->sub_total, 0, ',', '.') }}
                                                 </td>
-                                                <td>
+                                                {{-- <td>
                                                     {{ number_format($order->discount_amount, 0, ',', '.') }}
 
                                                 </td>
@@ -93,7 +93,7 @@
                                                 <td>
                                                     {{ number_format($order->service_charge, 0, ',', '.') }}
 
-                                                </td>
+                                                </td> --}}
                                                 <td>
                                                     {{ number_format($order->total_price, 0, ',', '.') }}
 
