@@ -153,20 +153,73 @@ class AuthController extends Controller
     }
 
 
+    // public function verify(Request $request, $id, $hash)
+    // {
+    //     try {
+    //         $user = User::findOrFail($id);
+
+    //         if (! hash_equals((string) $hash, sha1($user->email))) {
+    //             return response()->json(['message' => 'Link verifikasi tidak valid.'], 400);
+    //         }
+
+    //         if ($user->hasVerifiedEmail()) {
+    //             if ($redirect = $request->query('redirect')) {
+    //                 return redirect()->away($redirect . '?status=already_verified');
+    //             }
+    //             return response()->json(['message' => 'Email sudah terverifikasi.'], 200);
+    //         }
+
+    //         DB::transaction(function () use ($user) {
+    //             if ($user->markEmailAsVerified()) {
+    //                 event(new Verified($user));
+    //             }
+    //         });
+
+    //         if ($redirect = $request->query('redirect')) {
+    //             return redirect()->away($redirect . '?status=verified');
+    //         }
+
+    //         return response()->json(['message' => 'Email berhasil diverifikasi. Silakan login.'], 200);
+
+    //     } catch (Throwable $e) {
+    //         Log::error('Verifikasi gagal: '.$e->getMessage());
+    //         return response()->json(['message' => 'Terjadi kesalahan saat verifikasi.'], 500);
+    //     }
+    // }
+
     public function verify(Request $request, $id, $hash)
     {
         try {
             $user = User::findOrFail($id);
 
             if (! hash_equals((string) $hash, sha1($user->email))) {
-                return response()->json(['message' => 'Link verifikasi tidak valid.'], 400);
+                // JSON atau HTML
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => 'Link verifikasi tidak valid.'], 400);
+                }
+                return response()->view('auth.verify-result', [
+                    'status'  => 'invalid',
+                    'title'   => 'Link Tidak Valid',
+                    'message' => 'Maaf, link verifikasi tidak valid atau sudah kadaluarsa.',
+                    'code'    => 400,
+                ], 400);
             }
 
             if ($user->hasVerifiedEmail()) {
                 if ($redirect = $request->query('redirect')) {
                     return redirect()->away($redirect . '?status=already_verified');
                 }
-                return response()->json(['message' => 'Email sudah terverifikasi.'], 200);
+
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => 'Email sudah terverifikasi.'], 200);
+                }
+
+                return response()->view('auth.verify-result', [
+                    'status'  => 'already_verified',
+                    'title'   => 'Sudah Terverifikasi',
+                    'message' => 'Email kamu sudah terverifikasi sebelumnya. Kamu bisa langsung login.',
+                    'code'    => 200,
+                ]);
             }
 
             DB::transaction(function () use ($user) {
@@ -179,11 +232,30 @@ class AuthController extends Controller
                 return redirect()->away($redirect . '?status=verified');
             }
 
-            return response()->json(['message' => 'Email berhasil diverifikasi. Silakan login.'], 200);
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Email berhasil diverifikasi. Silakan login.'], 200);
+            }
+
+            return response()->view('auth.verify-result', [
+                'status'  => 'verified',
+                'title'   => 'Berhasil Diverifikasi!',
+                'message' => 'Terima kasih 🙌 Email kamu sudah aktif. Silakan login untuk melanjutkan.',
+                'code'    => 200,
+            ]);
 
         } catch (Throwable $e) {
             Log::error('Verifikasi gagal: '.$e->getMessage());
-            return response()->json(['message' => 'Terjadi kesalahan saat verifikasi.'], 500);
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => 'Terjadi kesalahan saat verifikasi.'], 500);
+            }
+
+            return response()->view('auth.verify-result', [
+                'status'  => 'error',
+                'title'   => 'Terjadi Kesalahan',
+                'message' => 'Maaf, ada kendala saat memproses verifikasi. Coba beberapa saat lagi.',
+                'code'    => 500,
+            ], 500);
         }
     }
 
