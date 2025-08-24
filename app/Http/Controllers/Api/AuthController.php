@@ -190,17 +190,58 @@ class AuthController extends Controller
     public function verify(Request $request, $id, $hash)
     {
         try {
-            $user = User::findOrFail($id);
+            // 1) Cek kadaluarsa lebih dulu (untuk signed URL)
+            $expired = false;
+            if ($request->has('expires')) {
+                $exp = (int) $request->query('expires');
+                if (now()->getTimestamp() > $exp) {
+                    $expired = true;
+                }
+            }
 
-            if (! hash_equals((string) $hash, sha1($user->email))) {
-                // JSON atau HTML
+            // Kalau kadaluarsa → tampilkan halaman 'expired'
+            if ($expired) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'message' => 'Link verifikasi sudah kadaluarsa.'
+                    ], 410); // 410 Gone
+                }
+
+                return response()->view('auth.verify-result', [
+                    'status'  => 'expired',
+                    'title'   => 'Link Kadaluarsa',
+                    'message' => 'Maaf, link verifikasi kamu sudah kadaluarsa. Silakan minta link verifikasi baru.',
+                    'code'    => 410,
+                    // optional: kirim id/email untuk memudahkan form kirim ulang
+                    'prefillEmail' => $request->query('email'),
+                ], 410);
+            }
+
+            // 2) Validasi tanda tangan (kalau pakai signed URL)
+            //    - Jika gagal tapi tidak kadaluarsa → perlakukan sebagai invalid
+            if ($request->has('signature') && ! $request->hasValidSignature()) {
                 if ($request->wantsJson()) {
                     return response()->json(['message' => 'Link verifikasi tidak valid.'], 400);
                 }
                 return response()->view('auth.verify-result', [
                     'status'  => 'invalid',
                     'title'   => 'Link Tidak Valid',
-                    'message' => 'Maaf, link verifikasi tidak valid atau sudah kadaluarsa.',
+                    'message' => 'Maaf, link verifikasi tidak valid atau sudah diubah.',
+                    'code'    => 400,
+                ], 400);
+            }
+
+            // 3) Proses verifikasi seperti biasa
+            $user = User::findOrFail($id);
+
+            if (! hash_equals((string) $hash, sha1($user->email))) {
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => 'Link verifikasi tidak valid.'], 400);
+                }
+                return response()->view('auth.verify-result', [
+                    'status'  => 'invalid',
+                    'title'   => 'Link Tidak Valid',
+                    'message' => 'Maaf, link verifikasi tidak valid.',
                     'code'    => 400,
                 ], 400);
             }
@@ -217,7 +258,7 @@ class AuthController extends Controller
                 return response()->view('auth.verify-result', [
                     'status'  => 'already_verified',
                     'title'   => 'Sudah Terverifikasi',
-                    'message' => 'Email kamu sudah terverifikasi sebelumnya. Kamu bisa langsung login.',
+                    'message' => 'Email kamu sudah terverifikasi. Kamu bisa langsung login.',
                     'code'    => 200,
                 ]);
             }

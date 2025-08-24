@@ -20,7 +20,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register']);
-Route::post('/email/resend', [\App\Http\Controllers\Api\AuthController::class, 'resendVerification']);
+Route::post('/email/resend', [\App\Http\Controllers\Api\AuthController::class, 'resendVerification'])->name('verification.resend');
 
 Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Api\AuthController::class, 'verify'])
     ->name('api.verification.verify')
