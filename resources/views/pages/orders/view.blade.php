@@ -59,7 +59,7 @@
                 <div class="col-md-4 text-md-center">
                     <address>
                     <strong>Cashier:</strong><br>
-                    {{ $order->kasir->name }}<br>
+                    {{ $order->user->name }}<br>
                     </address>
                 </div>
                 <div class="col-md-4 text-md-right">
