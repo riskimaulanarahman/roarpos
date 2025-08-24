@@ -11,10 +11,14 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
+        $userId = auth()->id();
 
         $products = Product::with('category')->when($request->input('name'), function ($query, $name) {
             return $query->where('name', 'like', '%' . $name . '%');
-        })->orderBy('created_at', 'desc')->paginate(10);
+        })
+        ->orderBy('created_at', 'desc')
+        ->where('user_id', $userId)
+        ->paginate(10);
 
         return view('pages.products.index', compact('products'));
     }
@@ -60,8 +64,11 @@ class ProductController extends Controller
             'category_id' => 'required'
         ]);
 
+        $userId = auth()->id();
+
         $product = new \App\Models\Product;
         $product->name = $request->name;
+        $product->user_id = $userId;
         $product->price = (int) $request->price;
         $product->stock = (int) $request->stock;
         $product->category_id = $request->category_id;
