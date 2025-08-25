@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'ROAR')
+@section('title', 'TOGA POS')
 
 @push('style')
     <!-- CSS Libraries -->

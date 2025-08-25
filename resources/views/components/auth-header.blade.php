@@ -1,6 +1,6 @@
  <div class="login-brand">
-     <img src="{{ asset('img/roar-logo.png') }}"
+     <img src="{{ asset('img/toga-gold-ts.png') }}"
          alt="logo"
-         width="150"
-         class="shadow-light">
+         width="200"
+         >
  </div>
