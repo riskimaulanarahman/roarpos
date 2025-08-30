@@ -4,6 +4,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Maatwebsite\Excel\Row;
 
+// Ping endpoint for connection testing (no auth required)
+Route::get('/ping', function () {
+    return response()->json([
+        'message' => 'pong',
+        'timestamp' => time(),
+        'server_time' => now()->toISOString()
+    ]);
+});
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -35,6 +44,8 @@ Route::post('logout', [\App\Http\Controllers\Api\AuthController::class, 'logout'
 // api resource product
 // Route::apiResource('products', \App\Http\Controllers\Api\ProductController::class)->middleware('auth:sanctum');
 Route::get('/products', [App\Http\Controllers\Api\ProductController::class, 'index'])->middleware('auth:sanctum');
+Route::get('/products/by-category/{categoryId}', [App\Http\Controllers\Api\ProductController::class, 'getByCategory'])->middleware('auth:sanctum');
+Route::get('/products/with-stock', [App\Http\Controllers\Api\ProductController::class, 'getWithStock'])->middleware('auth:sanctum');
 Route::post('/products', [App\Http\Controllers\Api\ProductController::class, 'store'])->middleware('auth:sanctum');
 Route::post('/products/edit', [App\Http\Controllers\Api\ProductController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('/products/{id}', [App\Http\Controllers\Api\ProductController::class, 'destroy'])->middleware('auth:sanctum');
@@ -42,6 +53,7 @@ Route::delete('/products/{id}', [App\Http\Controllers\Api\ProductController::cla
 // api resource order
 
 Route::post('/orders', [App\Http\Controllers\Api\OrderController::class, 'store'])->middleware('auth:sanctum');
+Route::post('/orders/bulk', [App\Http\Controllers\Api\OrderController::class, 'bulkStore'])->middleware('auth:sanctum');
 Route::get('/orders/date', [App\Http\Controllers\Api\OrderController::class, 'index'])->middleware('auth:sanctum');
 Route::get('/orders', [App\Http\Controllers\Api\OrderController::class, 'getAllOrder'])->middleware('auth:sanctum');
 Route::post('orders/{id}/refund', [App\Http\Controllers\Api\OrderController::class, 'refund'])->middleware('auth:sanctum');
@@ -71,3 +83,12 @@ Route::get('/order-temporary/{customer_name}', [App\Http\Controllers\Api\OrderTe
 
 Route::post('/vouchers', [App\Http\Controllers\Api\VoucherController::class, 'store']);
 Route::post('/vouchers/redeem/{code}', [App\Http\Controllers\Api\VoucherController::class, 'redeem']);
+
+// Batch sync endpoints for offline support
+Route::prefix('sync')->middleware('auth:sanctum')->group(function () {
+    Route::post('/categories/batch', [App\Http\Controllers\Api\SyncController::class, 'batchSyncCategories']);
+    Route::post('/products/batch', [App\Http\Controllers\Api\SyncController::class, 'batchSyncProducts']);
+    Route::post('/orders/batch', [App\Http\Controllers\Api\SyncController::class, 'batchSyncOrders']);
+    Route::get('/status', [App\Http\Controllers\Api\SyncController::class, 'getSyncStatus']);
+    Route::post('/resolve-conflicts', [App\Http\Controllers\Api\SyncController::class, 'resolveConflicts']);
+});

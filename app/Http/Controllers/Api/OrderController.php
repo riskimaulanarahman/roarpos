@@ -12,7 +12,6 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'cashier_id' => 'required',
             'items' => 'required|array',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -23,7 +22,7 @@ class OrderController extends Controller
         $order = \App\Models\Order::create([
             'user_id' => $userId,
             'transaction_number' => 'TRX-' . strtoupper(uniqid()),
-            'cashier_id' => $validatedData['cashier_id'],
+            'transaction_time' => now(), // Add transaction_time
             'total_price' => collect($validatedData['items'])->sum(function ($item) {
                 return \App\Models\Product::find($item['product_id'])->price * $item['quantity'];
             }),
@@ -55,14 +54,16 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
+        $userId = auth()->id();
         $orders = \App\Models\Order::with('orderItems.product')
+            ->where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($order) {
                 return [
                     'id' => $order->id,
                     'transaction_number' => $order->transaction_number,
-                    'cashier_id' => $order->cashier_id,
+                    'user_id' => $order->user_id,
                     'total_price' => $order->total_price,
                     'total_item' => $order->total_item,
                     'payment_method' => $order->payment_method,
@@ -101,10 +102,63 @@ class OrderController extends Controller
         ], 200);
     }
 
+    /**
+     * Bulk create orders for offline sync
+     */
+    public function bulkStore(Request $request)
+    {
+        $validatedData = $request->validate([
+            'orders' => 'required|array',
+            'orders.*.items' => 'required|array',
+            'orders.*.items.*.product_id' => 'required|exists:products,id',
+            'orders.*.items.*.quantity' => 'required|integer|min:1',
+            'orders.*.payment_method' => 'nullable|string',
+            'orders.*.nominal_bayar' => 'nullable|numeric',
+            'orders.*.transaction_number' => 'nullable|string',
+        ]);
+
+        $userId = auth()->id();
+        $createdOrders = [];
+
+        foreach ($validatedData['orders'] as $orderData) {
+            $order = Order::create([
+                'user_id' => $userId,
+                'transaction_number' => $orderData['transaction_number'] ?? 'TRX-' . strtoupper(uniqid()),
+                'total_price' => collect($orderData['items'])->sum(function ($item) {
+                    return \App\Models\Product::find($item['product_id'])->price * $item['quantity'];
+                }),
+                'total_item' => collect($orderData['items'])->sum('quantity'),
+                'payment_method' => $orderData['payment_method'] ?? 'cash',
+                'nominal_bayar' => $orderData['nominal_bayar'] ?? 0,
+                'sync_status' => 'synced',
+                'last_synced' => now(),
+                'client_version' => 'mobile',
+                'version_id' => 1,
+            ]);
+
+            foreach ($orderData['items'] as $item) {
+                $order->orderItems()->create([
+                    'product_id' => $item['product_id'],
+                    'quantity' => $item['quantity'],
+                    'total_price' => \App\Models\Product::find($item['product_id'])->price * $item['quantity'],
+                ]);
+            }
+
+            $createdOrders[] = $order->load('orderItems.product');
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bulk orders created successfully',
+            'data' => $createdOrders,
+        ], 201);
+    }
+
     // Fungsi refund order
     public function refund(Request $request, $id)
     {
-        $order = Order::find($id);
+        $userId = auth()->id();
+        $order = Order::where('user_id', $userId)->find($id);
         if (!$order) {
             return response()->json([
                 'success' => false,

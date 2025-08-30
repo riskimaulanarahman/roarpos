@@ -9,11 +9,10 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $fillable =
-    [
+    protected $fillable = [
         'user_id',
-        'transaction_number',
-        'cashier_id',
+        'transaction_number', 
+        'transaction_time',
         'total_price',
         'total_item',
         'payment_method',
@@ -21,14 +20,20 @@ class Order extends Model
         'status',
         'refund_method',
         'refund_nominal',
-        // 'payment_amount',
-        // 'sub_total',
-        // 'tax',
-        // 'discount',
-        // 'discount_amount',
-        // 'service_charge',
-        // 'cashier_name',
-        // 'transaction_time'
+        'sync_status',
+        'last_synced',
+        'client_version',
+        'version_id'
+    ];
+
+    protected $casts = [
+        'transaction_time' => 'datetime',
+        'total_price' => 'integer',
+        'total_item' => 'integer',
+        'nominal_bayar' => 'integer',
+        'refund_nominal' => 'integer',
+        'last_synced' => 'datetime',
+        'version_id' => 'integer',
     ];
 
     // public function kasir()
@@ -48,6 +53,6 @@ class Order extends Model
     }
     public function user()
     {
-        return $this->belongsTo(User::class, 'cashier_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

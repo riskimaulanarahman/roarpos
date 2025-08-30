@@ -166,6 +166,46 @@ class ProductController extends Controller
         }
     }
 
+    /**
+     * Get products by category for mobile app
+     */
+    public function getByCategory($categoryId)
+    {
+        $userId = auth()->id();
+        
+        $products = \App\Models\Product::with('category')
+            ->where('user_id', $userId)
+            ->where('category_id', $categoryId)
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Products retrieved successfully',
+            'data' => $products
+        ], 200);
+    }
+
+    /**
+     * Get products with stock info for mobile
+     */
+    public function getWithStock()
+    {
+        $userId = auth()->id();
+        
+        $products = \App\Models\Product::with('category')
+            ->where('user_id', $userId)
+            ->where('stock', '>', 0)
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Products with stock retrieved successfully', 
+            'data' => $products
+        ], 200);
+    }
+
     public function destroy($id): JsonResponse
     {
         $product = \App\Models\Product::findOrFail($id);

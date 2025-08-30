@@ -33,7 +33,7 @@ class ReportController extends Controller
 
         $query = Order::query()
             ->whereBetween('created_at', [$start_date, $end_date])
-            ->whereNull('status');
+            ->where('status', 'completed');
 
 
         $orders = $query->get();
@@ -46,7 +46,7 @@ class ReportController extends Controller
         $total = $totalSubtotal - $totalDiscount + $totalTax + $totalServiceCharge;
         $totalSoldQuantity = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
         ->whereBetween('orders.created_at', [$start_date, $end_date])
-        ->whereNull('orders.status')
+        ->where('orders.status', 'completed')
         ->sum('order_items.quantity');
         $data = [
             'total_revenue' => $totalRevenue,
@@ -91,10 +91,10 @@ class ReportController extends Controller
         )
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->join('orders', function ($join) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                    ->whereNull('orders.status');
+                $join->on('order_items.order_id', '=', 'orders.id');
             })
-            ->whereBetween(DB::raw('DATE(order_items.created_at)'), [$start_date, $end_date])
+            ->where('orders.status', 'completed')
+            ->whereBetween('orders.created_at', [$start_date, $end_date])
             ->groupBy('products.id', 'products.name', 'products.price')
             ->orderBy('total_quantity', 'desc');
 

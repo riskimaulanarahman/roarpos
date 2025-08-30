@@ -18,7 +18,7 @@ class CategoryController extends Controller
             ->orderBy('name', 'asc')
             ->get();
         return response()->json([
-            'status' => 'success',
+            'message' => 'Categories retrieved successfully',
             'data' => $categories
         ], 200);
     }

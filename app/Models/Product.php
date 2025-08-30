@@ -18,21 +18,42 @@ class Product extends Model
         'stock',
         'category_id',
         'image',
-        'is_best_seller'
+        'is_best_seller',
+        'sync_status',
+        'last_synced',
+        'client_version',
+        'version_id'
     ];
 
     protected $casts = [
         'price' => 'integer',
         'stock' => 'integer',
         'category_id' => 'integer',
+        'last_synced' => 'datetime',
+        'version_id' => 'integer',
     ];
 
-    public function category()
+    /**
+     * Get the user that owns this product
+     */
+    public function user()
     {
-        return $this->belongsTo(Category::class, );
+        return $this->belongsTo(User::class);
     }
 
-    public function orderItems() {
+    /**
+     * Get the category for this product
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Get the order items for this product
+     */
+    public function orderItems() 
+    {
         return $this->hasMany(\App\Models\OrderItem::class, 'product_id');
     }
 }

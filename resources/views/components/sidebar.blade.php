@@ -1,10 +1,10 @@
 <div class="main-sidebar sidebar-style-2">
     <aside id="sidebar-wrapper">
         <div class="sidebar-brand mb-5">
-            <a href="/home"><img src="{{ asset('img/roar-logo.png') }}" width="100"></a>
+            <a href="/home"><img src="{{ asset('img/toga-gold-ts.png') }}" width="100"></a>
         </div>
         <div class="sidebar-brand sidebar-brand-sm">
-            <a href="/home">PB</a>
+            <a href="/home">TOGA</a>
         </div>
 
         <ul class="sidebar-menu">
