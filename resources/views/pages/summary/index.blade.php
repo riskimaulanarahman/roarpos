@@ -47,7 +47,23 @@
                                                     value="{{ old('date_to') ?? ($date_to ?? request()->query('date_to')) }}"
                                                     class="form-control datepicker">
                                             </div>
-                                            @error('date_to')<div class="alert alert-danger">{{ $message }}</div>@enderror
+                                            @error('date_to')
+                                                <div class="alert alert-danger">
+                                                    {{ $message }}
+                                                </div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Periode</label>
+                                                <select name="period" class="form-control" id="periodSelectSummary">
+                                                    <option value="">Custom</option>
+                                                    <option value="harian" {{ request('period')=='harian' ? 'selected' : '' }}>Harian</option>
+                                                    <option value="mingguan" {{ request('period')=='mingguan' ? 'selected' : '' }}>Mingguan</option>
+                                                    <option value="bulanan" {{ request('period')=='bulanan' ? 'selected' : '' }}>Bulanan</option>
+                                                    <option value="tahunan" {{ request('period')=='tahunan' ? 'selected' : '' }}>Tahunan</option>
+                                                </select>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
                                             <div class="form-group">
@@ -60,10 +76,6 @@
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label>Metode Bayar</label>
-                                                <select name="payment_method" class="form-control">
                                                     <option value="">Semua</option>
                                                     @foreach(($paymentMethods ?? []) as $pm)
                                                         <option value="{{ $pm }}" {{ ($paymentMethod ?? request('payment_method')) == $pm ? 'selected' : '' }}>{{ ucfirst($pm) }}</option>
@@ -98,14 +110,34 @@
                                     </div>
 
                                     <div class="row">
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <button type="submit" class="btn btn-primary btn-lg btn-block"
-                                                    tabindex="4">
-                                                    Filter
-                                                </button>
-                                            </div>
+                                        <div class="col-md-3 d-flex align-items-end">
+                                            <button type="submit" class="btn btn-primary btn-lg mr-2" tabindex="4">Filter</button>
+                                            <button type="button" id="btnResetSummary" class="btn btn-light btn-lg">Reset</button>
                                         </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        @php($chips = [])
+                                        @if(request('period')) @php($chips[] = 'Periode: '.ucfirst(request('period'))) @endif
+                                        @if(request('date_from')) @php($chips[] = 'Dari: '.request('date_from')) @endif
+                                        @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
+                                        @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
+                                        @if(request('payment_method')) @php($chips[] = 'Metode: '.ucfirst(request('payment_method'))) @endif
+                                        @if(request('category_id'))
+                                            @php($c = ($categories ?? collect())->firstWhere('id', request('category_id')))
+                                            @if($c) @php($chips[] = 'Kategori: '.$c->name) @endif
+                                        @endif
+                                        @if(request('product_id'))
+                                            @php($p = ($products ?? collect())->firstWhere('id', request('product_id')))
+                                            @if($p) @php($chips[] = 'Produk: '.$p->name) @endif
+                                        @endif
+                                        @if(count($chips))
+                                            <div>
+                                                @foreach($chips as $chip)
+                                                    <span class="badge badge-primary mr-2">{{ $chip }}</span>
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </div>
 
                                     @if ($totalRevenue ?? '')
@@ -209,6 +241,23 @@
     <script src="{{ asset('js/page/forms-advanced-forms.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        function savePrefs(prefix){ const f=document.querySelector('form'); const names=['date_from','date_to','period','status','payment_method','category_id','product_id']; const data={}; names.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; }); localStorage.setItem(prefix, JSON.stringify(data)); }
+        function loadPrefs(prefix){ const q=new URLSearchParams(location.search); if([...q.keys()].length) return; const raw=localStorage.getItem(prefix); if(!raw) return; const data=JSON.parse(raw); Object.entries(data).forEach(([k,v])=>{ const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v; }); }
+
+        function computeRange(period){
+            const pad=n=>String(n).padStart(2,'0');
+            const toStr=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+            const now=new Date(); let s,e;
+            if(period==='harian'){ s=new Date(now.getFullYear(),now.getMonth(),now.getDate()); e=new Date(s); }
+            else if(period==='mingguan'){ const day=(now.getDay()+6)%7; s=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day); e=new Date(s); e.setDate(s.getDate()+6); }
+            else if(period==='bulanan'){ s=new Date(now.getFullYear(),now.getMonth(),1); e=new Date(now.getFullYear(),now.getMonth()+1,0); }
+            else if(period==='tahunan'){ s=new Date(now.getFullYear(),0,1); e=new Date(now.getFullYear(),11,31); }
+            else return null; return {from:toStr(s), to:toStr(e)};
+        }
+        document.getElementById('periodSelectSummary')?.addEventListener('change', function(){
+            const r=computeRange(this.value); if(!r) return; const df=document.querySelector('input[name="date_from"]'); const dt=document.querySelector('input[name="date_to"]'); if(df) df.value=r.from; if(dt) dt.value=r.to;
+        });
+
         const trend = @json($chartTrend ?? null);
         const comp = @json($composition ?? null);
         if (trend) {
@@ -245,5 +294,9 @@
                 }
             });
         }
+        // reset + prefs
+        document.getElementById('btnResetSummary')?.addEventListener('click', function(){ const f=document.querySelector('form'); f.querySelector('[name="period"]').value=''; ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) el.value=''; }); const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value=''; });
+        loadPrefs('summary_filters');
+        document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('summary_filters'));
     </script>
 @endpush

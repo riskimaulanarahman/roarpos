@@ -65,14 +65,38 @@ class SummaryController extends Controller
         $totalSubtotal = (clone $query)->sum('sub_total');
         $total = $totalSubtotal - $totalDiscount + $totalTax + $totalServiceCharge;
 
-        // Trend per day
+        // Trend: respect period
+        $period = $request->input('period');
+        $selectExpr = DB::raw('DATE(created_at) as bucket');
+        $groupExpr = DB::raw('DATE(created_at)');
+        if ($period === 'mingguan') {
+            $selectExpr = DB::raw('YEARWEEK(created_at, 3) as bucket');
+            $groupExpr = DB::raw('YEARWEEK(created_at, 3)');
+        } elseif ($period === 'bulanan') {
+            $selectExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m') as bucket");
+            $groupExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m')");
+        } elseif ($period === 'tahunan') {
+            $selectExpr = DB::raw('YEAR(created_at) as bucket');
+            $groupExpr = DB::raw('YEAR(created_at)');
+        }
+
         $rows = (clone $query)
-            ->select([DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_price) as revenue')])
-            ->groupBy(DB::raw('DATE(created_at)'))
-            ->orderBy('date')
+            ->select([$selectExpr, DB::raw('SUM(total_price) as revenue')])
+            ->groupBy($groupExpr)
+            ->orderBy('bucket')
             ->get();
+        $labels = $rows->pluck('bucket')->map(function ($b) use ($period) {
+            if ($period === 'mingguan') {
+                $str = (string)$b; $year = substr($str, 0, 4); $week = substr($str, -2);
+                return $year . ' W' . $week;
+            }
+            return (string)$b;
+        });
+        if (!$period || $period === 'harian') {
+            $labels = $labels->map(fn($d) => Carbon::parse($d)->format('Y-m-d'));
+        }
         $chartTrend = [
-            'labels' => $rows->pluck('date')->map(fn($d) => Carbon::parse($d)->format('Y-m-d')),
+            'labels' => $labels,
             'revenue' => $rows->pluck('revenue'),
         ];
 

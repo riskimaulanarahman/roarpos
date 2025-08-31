@@ -60,12 +60,11 @@ class ReportController extends Controller
                 });
             });
 
-        // Paginated orders for table
+        // All rows for DataTables client-side pagination
         $orders = (clone $baseQuery)
             ->with('user')
             ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->query());
+            ->get();
 
         // Summary metrics
         $ordersCount = (clone $baseQuery)->count();
@@ -94,19 +93,45 @@ class ReportController extends Controller
             'total_items_sold' => $totalItemsSold,
         ];
 
-        // Timeseries chart data (by date)
+        // Timeseries chart data (respect period)
+        $period = $request->input('period');
+        $selectExpr = DB::raw('DATE(created_at) as bucket');
+        $groupExpr = DB::raw('DATE(created_at)');
+        if ($period === 'mingguan') {
+            $selectExpr = DB::raw('YEARWEEK(created_at, 3) as bucket');
+            $groupExpr = DB::raw('YEARWEEK(created_at, 3)');
+        } elseif ($period === 'bulanan') {
+            $selectExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m') as bucket");
+            $groupExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m')");
+        } elseif ($period === 'tahunan') {
+            $selectExpr = DB::raw('YEAR(created_at) as bucket');
+            $groupExpr = DB::raw('YEAR(created_at)');
+        }
+
         $timeseriesRows = (clone $baseQuery)
             ->select([
-                DB::raw('DATE(created_at) as date'),
+                $selectExpr,
                 DB::raw('SUM(total_price) as revenue'),
                 DB::raw('COUNT(*) as orders_count')
             ])
-            ->groupBy(DB::raw('DATE(created_at)'))
-            ->orderBy('date')
+            ->groupBy($groupExpr)
+            ->orderBy('bucket')
             ->get();
 
+        $labels = $timeseriesRows->pluck('bucket')->map(function ($b) use ($period) {
+            if ($period === 'mingguan') {
+                $str = (string)$b; $year = substr($str, 0, 4); $week = substr($str, -2);
+                return $year . ' W' . $week;
+            }
+            return (string)$b;
+        });
+
+        if (!$period || $period === 'harian') {
+            $labels = $labels->map(fn($d) => Carbon::parse($d)->format('Y-m-d'));
+        }
+
         $chart = [
-            'labels' => $timeseriesRows->pluck('date')->map(fn($d) => Carbon::parse($d)->format('Y-m-d')),
+            'labels' => $labels,
             'revenue' => $timeseriesRows->pluck('revenue'),
             'orders' => $timeseriesRows->pluck('orders_count'),
         ];
@@ -116,7 +141,7 @@ class ReportController extends Controller
         $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
 
-        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId'));
+        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','period'));
     }
 
     public function byCategory(Request $request)
@@ -198,17 +223,42 @@ class ReportController extends Controller
                 ->when($productId, fn($q) => $q->where('order_items.product_id', $productId))
                 ->select('order_items.*');
 
-            $items = (clone $base)->orderBy('order_items.created_at', 'desc')->paginate(10)->appends($request->query());
+            $items = (clone $base)->orderBy('order_items.created_at', 'desc')->get();
+
+            $period = $request->input('period');
+            $selectExpr = DB::raw('DATE(orders.created_at) as bucket');
+            $groupExpr = DB::raw('DATE(orders.created_at)');
+            if ($period === 'mingguan') {
+                $selectExpr = DB::raw('YEARWEEK(orders.created_at, 3) as bucket');
+                $groupExpr = DB::raw('YEARWEEK(orders.created_at, 3)');
+            } elseif ($period === 'bulanan') {
+                $selectExpr = DB::raw("DATE_FORMAT(orders.created_at, '%Y-%m') as bucket");
+                $groupExpr = DB::raw("DATE_FORMAT(orders.created_at, '%Y-%m')");
+            } elseif ($period === 'tahunan') {
+                $selectExpr = DB::raw('YEAR(orders.created_at) as bucket');
+                $groupExpr = DB::raw('YEAR(orders.created_at)');
+            }
 
             $timeseries = (clone $base)
-                ->addSelect(DB::raw('DATE(orders.created_at) as date'))
+                ->addSelect($selectExpr)
                 ->addSelect(DB::raw('SUM(order_items.total_price) as revenue'))
-                ->groupBy(DB::raw('DATE(orders.created_at)'))
-                ->orderBy('date')
+                ->groupBy($groupExpr)
+                ->orderBy('bucket')
                 ->get();
 
+            $labels = $timeseries->pluck('bucket')->map(function ($b) use ($period) {
+                if ($period === 'mingguan') {
+                    $str = (string)$b; $year = substr($str, 0, 4); $week = substr($str, -2);
+                    return $year . ' W' . $week;
+                }
+                return (string)$b;
+            });
+            if (!$period || $period === 'harian') {
+                $labels = $labels->map(fn($d) => Carbon::parse($d)->format('Y-m-d'));
+            }
+
             $chart = [
-                'labels' => $timeseries->pluck('date')->map(fn($d) => Carbon::parse($d)->format('Y-m-d')),
+                'labels' => $labels,
                 'revenue' => $timeseries->pluck('revenue'),
             ];
         }
@@ -218,7 +268,7 @@ class ReportController extends Controller
         $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
 
-        return view('pages.report.detail', compact('items', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId'));
+        return view('pages.report.detail', compact('items', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId', 'period'));
     }
 
     public function download(Request $request)
@@ -230,7 +280,14 @@ class ReportController extends Controller
 
         $date_from  = $request->date_from;
         $date_to    = $request->date_to;
+        $status = $request->input('status');
+        $payment = $request->input('payment_method');
+        $categoryId = $request->input('category_id');
+        $productId = $request->input('product_id');
 
-        return (new OrdersExport)->forRange($date_from, $date_to)->download('report-orders.csv');
+        return (new OrdersExport)
+            ->forRange($date_from, $date_to)
+            ->withFilters($status, $payment, $categoryId, $productId)
+            ->download('report-orders.csv');
     }
 }

@@ -56,6 +56,18 @@
                                         </div>
                                         <div class="col-md-2">
                                             <div class="form-group">
+                                                <label>Periode</label>
+                                                <select name="period" class="form-control" id="periodSelect">
+                                                    <option value="">Custom</option>
+                                                    <option value="harian" {{ request('period')=='harian' ? 'selected' : '' }}>Harian (Hari ini)</option>
+                                                    <option value="mingguan" {{ request('period')=='mingguan' ? 'selected' : '' }}>Mingguan (Minggu ini)</option>
+                                                    <option value="bulanan" {{ request('period')=='bulanan' ? 'selected' : '' }}>Bulanan (Bulan ini)</option>
+                                                    <option value="tahunan" {{ request('period')=='tahunan' ? 'selected' : '' }}>Tahunan (Tahun ini)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
                                                 <label>Status</label>
                                                 <select name="status" class="form-control">
                                                     <option value="">Semua</option>
@@ -104,15 +116,37 @@
 
                                     <div class="row">
                                         <div class="col-md-2">
-                                            <div class="form-group">
-                                                <button type="submit" class="btn btn-primary btn-lg btn-block"
-                                                    tabindex="4">
-                                                    Filter
-                                                </button>
+                                            <div class="form-group d-flex">
+                                                <button type="submit" class="btn btn-primary btn-lg mr-2" tabindex="4">Filter</button>
+                                                <button type="button" id="btnResetFilters" class="btn btn-light btn-lg">Reset</button>
                                             </div>
                                         </div>
                                     </div>
                                 </form>
+
+                                <div class="mb-3">
+                                    @php($chips = [])
+                                    @if(request('period')) @php($chips[] = 'Periode: '.ucfirst(request('period'))) @endif
+                                    @if(request('date_from')) @php($chips[] = 'Dari: '.request('date_from')) @endif
+                                    @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
+                                    @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
+                                    @if(request('payment_method')) @php($chips[] = 'Metode: '.ucfirst(request('payment_method'))) @endif
+                                    @if(request('category_id'))
+                                        @php($c = ($categories ?? collect())->firstWhere('id', request('category_id')))
+                                        @if($c) @php($chips[] = 'Kategori: '.$c->name) @endif
+                                    @endif
+                                    @if(request('product_id'))
+                                        @php($p = ($products ?? collect())->firstWhere('id', request('product_id')))
+                                        @if($p) @php($chips[] = 'Produk: '.$p->name) @endif
+                                    @endif
+                                    @if(count($chips))
+                                        <div>
+                                            @foreach($chips as $chip)
+                                                <span class="badge badge-primary mr-2">{{ $chip }}</span>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
 
                                 @if (!empty($summary))
                                     <div class="row mt-4">
@@ -156,6 +190,10 @@
                                         </div>
                                     @endif
                                     @if (count($orders) > 0)
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div></div>
+                                            <button type="button" class="btn btn-outline-primary" id="btnExportOrders">Export View (CSV)</button>
+                                        </div>
                                         <div class="table-responsive">
                                             <table id="ordersTable" class="table table-striped table-bordered">
                                                 <thead>
@@ -205,12 +243,20 @@
                                                 @endforelse
 
                                                 </tbody>
+                                                <tfoot>
+                                                    <tr>
+                                                        <th>Total</th>
+                                                        <th id="ftSubTotal"></th>
+                                                        <th id="ftDiscount"></th>
+                                                        <th id="ftTax"></th>
+                                                        <th id="ftService"></th>
+                                                        <th id="ftTotalPrice"></th>
+                                                        <th id="ftTotalItem"></th>
+                                                        <th></th>
+                                                    </tr>
+                                                </tfoot>
                                             </table>
                                         </div>
-                                        <div class="float-right">
-                                            {{ $orders->withQueryString()->links() }}
-                                        </div>
-
                                         <form action="{{ route('report.download') }}" method="GET">
 
                                             <div class="row">
@@ -265,6 +311,8 @@
     {{-- <script src="assets/js/page/forms-advanced-forms.js"></script> --}}
     <script src="{{ asset('js/page/forms-advanced-forms.js') }}"></script>
     <script src="{{ asset('library/datatables/media/js/jquery.dataTables.js') }}"></script>
+    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         function parseCurrency(str){ if(!str) return 0; return parseInt(String(str).replace(/[^0-9\-]/g,'')) || 0; }
@@ -287,30 +335,104 @@
             });
         }
 
+        function computeRange(period){
+            const pad=n=>String(n).padStart(2,'0');
+            const toStr=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+            const now=new Date();
+            let start,end;
+            if(period==='harian'){
+                start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+                end=new Date(start);
+            }else if(period==='mingguan'){
+                const day=(now.getDay()+6)%7; // Senin=0
+                start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day);
+                end=new Date(start); end.setDate(start.getDate()+6);
+            }else if(period==='bulanan'){
+                start=new Date(now.getFullYear(),now.getMonth(),1);
+                end=new Date(now.getFullYear(),now.getMonth()+1,0);
+            }else if(period==='tahunan'){
+                start=new Date(now.getFullYear(),0,1);
+                end=new Date(now.getFullYear(),11,31);
+            }else{ return null; }
+            return { from: toStr(start), to: toStr(end) };
+        }
+
+        document.getElementById('periodSelect')?.addEventListener('change', function(){
+            const r=computeRange(this.value); if(!r) return; 
+            const df=document.querySelector('input[name="date_from"]');
+            const dt=document.querySelector('input[name="date_to"]');
+            if(df) df.value=r.from; if(dt) dt.value=r.to;
+        });
+
+        function savePrefs(prefix){
+            const f=document.querySelector('form[action*="filter"]')||document.querySelector('form'); if(!f) return;
+            const names=['date_from','date_to','period','status','payment_method','category_id','product_id'];
+            const data={}; names.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; });
+            localStorage.setItem(prefix, JSON.stringify(data));
+        }
+        function loadPrefs(prefix){
+            const q = new URLSearchParams(window.location.search);
+            if([...q.keys()].length) return; // jangan override jika datang dari query
+            const raw=localStorage.getItem(prefix); if(!raw) return; const data=JSON.parse(raw);
+            Object.entries(data).forEach(([k,v])=>{ const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v; });
+        }
+        function exportDataTableCSV(table, filename){
+            const rows = [];
+            const headers=[]; $(table.table().header()).find('th').each(function(){ headers.push($(this).text().trim()); });
+            rows.push(headers.join(','));
+            table.rows({search:'applied'}).every(function(){ const cols=[]; $(this.node()).find('td').each(function(){ cols.push('"'+$(this).text().trim().replace(/"/g,'""')+'"'); }); rows.push(cols.join(',')); });
+            const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+        }
+
         $(function(){
+            loadPrefs('report_order_filters');
             const table = $('#ordersTable').DataTable({ paging: true, info: true });
             function recomputeFromTable(){
-                if(!ordersChart) return;
-                const revByDate = {};
-                const countByDate = {};
-                table.rows({ search:'applied' }).every(function(){
-                    const $row = $(this.node());
-                    const tds = $row.find('td');
-                    const dateText = $(tds.get(0)).text();
-                    const dateKey = toDateKey(dateText);
-                    const totalPrice = parseCurrency($(tds.get(5)).text());
-                    revByDate[dateKey] = (revByDate[dateKey] || 0) + totalPrice;
-                    countByDate[dateKey] = (countByDate[dateKey] || 0) + 1;
+                if(ordersChart){
+                    const revByDate = {}; const countByDate = {};
+                    table.rows({ search:'applied' }).every(function(){
+                        const $row = $(this.node()); const tds = $row.find('td');
+                        const dateText = $(tds.get(0)).text(); const dateKey = toDateKey(dateText);
+                        const totalPrice = parseCurrency($(tds.get(5)).text());
+                        revByDate[dateKey] = (revByDate[dateKey] || 0) + totalPrice;
+                        countByDate[dateKey] = (countByDate[dateKey] || 0) + 1;
+                    });
+                    const labels = Object.keys(revByDate).sort();
+                    const revenue = labels.map(l => revByDate[l]);
+                    const orders = labels.map(l => countByDate[l] || 0);
+                    ordersChart.data.labels = labels;
+                    ordersChart.data.datasets[0].data = revenue;
+                    ordersChart.data.datasets[1].data = orders;
+                    ordersChart.update('none');
+                }
+                // footer totals
+                let sub=0, disc=0, tax=0, serv=0, tot=0, items=0;
+                table.rows({search:'applied'}).every(function(){ const tds=$(this.node()).find('td');
+                    sub += parseCurrency($(tds.get(1)).text());
+                    disc += parseCurrency($(tds.get(2)).text());
+                    tax += parseCurrency($(tds.get(3)).text());
+                    serv += parseCurrency($(tds.get(4)).text());
+                    tot += parseCurrency($(tds.get(5)).text());
+                    items += parseInt($(tds.get(6)).text())||0;
                 });
-                const labels = Object.keys(revByDate).sort();
-                const revenue = labels.map(l => revByDate[l]);
-                const orders = labels.map(l => countByDate[l] || 0);
-                ordersChart.data.labels = labels;
-                ordersChart.data.datasets[0].data = revenue;
-                ordersChart.data.datasets[1].data = orders;
-                ordersChart.update('none');
+                $('#ftSubTotal').text(sub.toLocaleString('id-ID'));
+                $('#ftDiscount').text(disc.toLocaleString('id-ID'));
+                $('#ftTax').text(tax.toLocaleString('id-ID'));
+                $('#ftService').text(serv.toLocaleString('id-ID'));
+                $('#ftTotalPrice').text(tot.toLocaleString('id-ID'));
+                $('#ftTotalItem').text(items.toLocaleString('id-ID'));
             }
             table.on('draw', recomputeFromTable);
+            recomputeFromTable();
+
+            $('#btnExportOrders').on('click', ()=>exportDataTableCSV(table, 'report_orders_view.csv'));
+            $('#btnResetFilters').on('click', function(){
+                const f=document.querySelector('form[action*="filter"]')||document.querySelector('form');
+                f.querySelector('[name="period"]').value='';
+                ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) el.value=''; });
+                const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value='';
+            });
+            document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_order_filters'));
         });
     </script>
 @endpush
