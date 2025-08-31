@@ -24,12 +24,12 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
 
     public function query()
     {
-        return Order::query()->with('kasir')->whereBetween('created_at', [$this->start, $this->end]);
+        return Order::query()->with('user')->whereBetween('created_at', [$this->start, $this->end]);
     }
 
     public function map($order): array
     {
-        $i = 1;
+        static $i = 1;
         return [
             $i++,
             $order->transaction_time,
@@ -39,7 +39,7 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
             $order->service_charge,
             $order->total_price,
             $order->total_item,
-            $order->kasir->name
+            optional($order->user)->name ?? ($order->cashier_name ?? '-')
             // Carbon::parse($order->created_at)->format('d-m-Y'),
         ];
     }

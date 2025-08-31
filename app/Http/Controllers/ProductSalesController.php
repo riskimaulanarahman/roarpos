@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Exports\ProductSalesExport;
 use App\Models\OrderItem;
+use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +14,9 @@ class ProductSalesController extends Controller
 
     public function index()
     {
-        return view('pages.product_sales.index');
+        $categories = Category::orderBy('name')->get(['id','name']);
+        $products = Product::orderBy('name')->get(['id','name']);
+        return view('pages.product_sales.index', compact('categories','products'));
     }
 
 
@@ -21,32 +25,39 @@ class ProductSalesController extends Controller
 
         $this->validate($request, [
             'date_from' => 'required|date',
-            'date_to'   => 'required|date',
+            'date_to'   => 'required|date|after_or_equal:date_from',
         ]);
 
         $date_from  = $request->date_from;
         $date_to    = $request->date_to;
+        $categoryId = $request->input('category_id');
+        $productId = $request->input('product_id');
 
         $query = OrderItem::select(
+            'products.id as product_id',
             'products.name as product_name',
             DB::raw('SUM(order_items.quantity) as total_quantity'),
             DB::raw('SUM(order_items.total_price) as total_price')
         )
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->whereBetween(DB::raw('DATE(order_items.created_at)'), [$date_from, $date_to])
-            ->groupBy('products.name')
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->when($productId, fn($q) => $q->where('order_items.product_id', $productId))
+            ->groupBy('products.id','products.name')
             ->orderBy('total_quantity', 'desc');
 
         $totalProductSold = $query->get();
 
-        // // Debugging query
-        // $sql = $query->toSql();
-        // $bindings = $query->getBindings();
+        $chart = [
+            'labels' => $totalProductSold->pluck('product_name'),
+            'quantity' => $totalProductSold->pluck('total_quantity'),
+            'revenue' => $totalProductSold->pluck('total_price'),
+        ];
 
-        // dd($sql, $bindings, $totalProductSold);
+        $categories = Category::orderBy('name')->get(['id','name']);
+        $products = Product::orderBy('name')->get(['id','name']);
 
-
-        return view('pages.product_sales.index', compact('totalProductSold'));
+        return view('pages.product_sales.index', compact('totalProductSold', 'chart', 'date_from', 'date_to','categories','products','categoryId','productId'));
     }
 
     public function download(Request $request)

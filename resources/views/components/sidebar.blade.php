@@ -80,9 +80,19 @@
                         <i class="fas fa-book"></i><span>Reports</span>
                     </a>
                     <ul class="dropdown-menu">
-                        <li class="{{ Request::is('report*') ? 'active' : '' }}">
+                        <li class="{{ Request::is('report') || Request::is('report/filter') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('report.index') }}">
                                 <i class="fas fa-book-open"></i> <span>Report Order</span>
+                            </a>
+                        </li>
+                        <li class="{{ Request::is('report/by-category*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('report.byCategory') }}">
+                                <i class="fas fa-layer-group"></i> <span>Order by Category</span>
+                            </a>
+                        </li>
+                        <li class="{{ Request::is('report/detail*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('report.detail') }}">
+                                <i class="fas fa-list"></i> <span>Order Detail</span>
                             </a>
                         </li>
                         <li class="{{ Request::is('summary*') ? 'active' : '' }}">

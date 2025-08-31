@@ -57,6 +57,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/report', [\App\Http\Controllers\ReportController::class, 'index'])->name('report.index');
     Route::get('/report/filter', [ReportController::class, 'filter'])->name('filter.index');
     Route::get('/report/download', [ReportController::class, 'download'])->name('report.download');
+    Route::get('/report/by-category', [ReportController::class, 'byCategory'])->name('report.byCategory');
+    Route::get('/report/detail', [ReportController::class, 'detail'])->name('report.detail');
 
     Route::get('/summary', [\App\Http\Controllers\SummaryController::class, 'index'])->name('summary.index');
     Route::get('/summary/filter-summary', [\App\Http\Controllers\SummaryController::class, 'filterSummary'])->name('filterSummary.index');
