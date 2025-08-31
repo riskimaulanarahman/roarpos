@@ -11,4 +11,33 @@
     margin: 20px;
     padding: 20px;
 }
+/* Theme override based on toga-gold-ts.png (gold primary) */
+:root {
+    --gold-primary: #C9A227; /* golden */
+    --gold-primary-dark: #b08e1f;
+}
+
+a { color: var(--gold-primary); }
+
+.btn-primary,
+.btn-primary:focus {
+    background-color: var(--gold-primary) !important;
+    border-color: var(--gold-primary) !important;
+}
+.btn-primary:hover {
+    background-color: var(--gold-primary-dark) !important;
+    border-color: var(--gold-primary-dark) !important;
+}
+
+.bg-primary { background-color: var(--gold-primary) !important; }
+.text-primary { color: var(--gold-primary) !important; }
+.badge-primary { background-color: var(--gold-primary) !important; }
+.navbar-bg { background-color: var(--gold-primary) !important; }
+.sidebar-brand a { color: var(--gold-primary) !important; }
+.sidebar-menu .active > a {
+    color: var(--gold-primary) !important;
+}
+.sidebar-menu li a:hover {
+    color: var(--gold-primary) !important;
+}
 

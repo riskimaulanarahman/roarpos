@@ -74,12 +74,12 @@
                 </li>
 
                 {{-- Reports dropdown untuk user --}}
-                <li class="nav-item dropdown
-                    {{ Request::is('report*') || Request::is('summary*') || Request::is('product_sales*') ? 'active' : '' }}">
-                    <a href="#" class="nav-link has-dropdown">
+                @php($reportsOpen = Request::is('report*') || Request::is('summary*') || Request::is('product_sales*'))
+                <li class="nav-item dropdown {{ $reportsOpen ? 'active' : '' }}">
+                    <a href="#" class="nav-link has-dropdown {{ $reportsOpen ? 'active' : '' }}" aria-expanded="{{ $reportsOpen ? 'true' : 'false' }}">
                         <i class="fas fa-book"></i><span>Reports</span>
                     </a>
-                    <ul class="dropdown-menu">
+                    <ul class="dropdown-menu {{ $reportsOpen ? 'show' : '' }}" style="{{ $reportsOpen ? 'display:block;' : '' }}">
                         <li class="{{ Request::is('report') || Request::is('report/filter') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('report.index') }}">
                                 <i class="fas fa-book-open"></i> <span>Report Order</span>
