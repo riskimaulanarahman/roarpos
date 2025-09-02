@@ -48,12 +48,15 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('home', [DashboardController::class, 'index'])->name('home');
     Route::get('home/filter', [DashboardController::class, 'filter'])->name('dashboard_grafik.filter');
+    Route::get('dashboard/sales-series', [GrafikSalesController::class, 'series'])->name('dashboard.sales_series');
+    Route::get('dashboard/sales-series.csv', [GrafikSalesController::class, 'seriesCsv'])->name('dashboard.sales_series_csv');
 
     
 
     Route::resource('user', UserController::class)->middleware('role:admin');
     Route::resource('product', \App\Http\Controllers\ProductController::class);
     Route::resource('order', \App\Http\Controllers\OrderController::class);
+    Route::get('/order/{id}/details-json', [\App\Http\Controllers\OrderController::class, 'showJson'])->name('order.details_json');
     Route::resource('category', \App\Http\Controllers\CategoryController::class);
     Route::resource('discount', \App\Http\Controllers\DiscountController::class);
     Route::resource('additional_charge', \App\Http\Controllers\AdditionalChargeController::class);

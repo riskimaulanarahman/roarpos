@@ -222,31 +222,11 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="col-lg-4 mb-4">
-                                                <div class="card">
-                                                    <div class="card-header"><h4>Composition</h4></div>
-                                                    <div class="card-body">
-                                                        <canvas id="summaryCompositionChart"></canvas>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </div>
 
                                         <div class="card">
                                             <div class="card-body">
                                                 <ul class="list-group list-group-flush">
-                                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                        <strong>Total Discount:</strong> <span>{{ number_format($totalDiscount, 0, ',', '.') }}</span>
-                                                    </li>
-                                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                        <strong>Total Tax:</strong> <span>{{ number_format($totalTax, 0, ',', '.') }}</span>
-                                                    </li>
-                                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                        <strong>Total Service Charge:</strong> <span>{{ number_format($totalServiceCharge, 0, ',', '.') }}</span>
-                                                    </li>
-                                                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                        <strong>Total Subtotal:</strong> <span>{{ number_format($totalSubtotal, 0, ',', '.') }}</span>
-                                                    </li>
                                                     <li class="list-group-item d-flex justify-content-between align-items-center border-bottom-0">
                                                         <strong>Total:</strong> <span>{{ number_format($total, 0, ',', '.') }}</span>
                                                     </li>
@@ -362,7 +342,9 @@
             });
         }
         if (comp) {
-            const cctx = document.getElementById('summaryCompositionChart').getContext('2d');
+            const el = document.getElementById('summaryCompositionChart');
+            if (el) {
+            const cctx = el.getContext('2d');
             new Chart(cctx, {
                 type: 'doughnut',
                 data: {
@@ -378,7 +360,7 @@
                     }]
                 }
             });
-        }
+        }}
         // reset + prefs
         document.getElementById('btnResetSummary')?.addEventListener('click', function(){ const f=document.querySelector('form'); f.querySelector('[name="period"]').value=''; ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) el.value=''; }); const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value=''; });
         loadPrefs('summary_filters');

@@ -34,6 +34,14 @@ class DashboardController extends Controller
             ->whereDate('created_at', Carbon::today())
             ->sum('total_price');
 
+        // Breakdown revenue today by payment method
+        $paymentBreakdownToday = Order::select('payment_method', DB::raw('SUM(total_price) as total_revenue'))
+            ->where('user_id', $userId)
+            ->whereDate('created_at', Carbon::today())
+            ->groupBy('payment_method')
+            ->orderByDesc(DB::raw('SUM(total_price)'))
+            ->get();
+
         // Produk terjual hari ini (nama produk dan jumlah)
         $productSalesToday = OrderItem::select(
                 'products.name as product_name',
@@ -62,6 +70,7 @@ class DashboardController extends Controller
             'orders',
             'totalPriceToday',
             'productSalesToday',
+            'paymentBreakdownToday',
             'data',
             'month',
             'year'
@@ -83,8 +92,8 @@ class DashboardController extends Controller
         $products = Product::where('user_id', $userId)->count();
         $ordersLength = Order::where('user_id', $userId)->count();
         $categories = Category::where('user_id', $userId)->count();
-        $discounts= Discount::count();
-        $additional_charges = \App\Models\AdditionalCharges::where('user_id', $userId)->count();
+        // $discounts= Discount::count();
+        // $additional_charges = \App\Models\AdditionalCharges::where('user_id', $userId)->count();
 
         $orders = Order::with('kasir')
             ->where('user_id', $userId)
@@ -95,6 +104,14 @@ class DashboardController extends Controller
         $totalPriceToday = Order::where('user_id', $userId)
             ->whereDate('created_at', Carbon::today())
             ->sum('total_price');
+
+        // Breakdown revenue today by payment method
+        $paymentBreakdownToday = Order::select('payment_method', DB::raw('SUM(total_price) as total_revenue'))
+            ->where('user_id', $userId)
+            ->whereDate('created_at', Carbon::today())
+            ->groupBy('payment_method')
+            ->orderByDesc(DB::raw('SUM(total_price)'))
+            ->get();
 
         // Produk terjual hari ini (nama produk dan jumlah) untuk halaman filter
         $productSalesToday = OrderItem::select(
@@ -116,11 +133,10 @@ class DashboardController extends Controller
             'products',
             'ordersLength',
             'categories',
-            'discounts',
-            'additional_charges',
             'orders',
             'totalPriceToday',
             'productSalesToday',
+            'paymentBreakdownToday',
             'data',
             'month',
             'year'

@@ -271,8 +271,10 @@ class ReportController extends Controller
             }
 
             $timeseries = (clone $base)
-                ->addSelect($selectExpr)
-                ->addSelect(DB::raw('SUM(order_items.total_price) as revenue'))
+                ->select([
+                    $selectExpr,
+                    DB::raw('SUM(order_items.total_price) as revenue')
+                ])
                 ->groupBy($groupExpr)
                 ->orderBy('bucket')
                 ->get();

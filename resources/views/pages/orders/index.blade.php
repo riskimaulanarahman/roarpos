@@ -76,8 +76,7 @@
                                         @foreach ($orders as $order)
                                             <tr>
 
-                                                <td><a
-                                                        href="{{ route('order.show', $order->id) }}">{{ $order->transaction_time }}</a>
+                                                <td><a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">{{ $order->transaction_time }}</a>
                                                 </td>
                                                 <td>
                                                     {{ number_format($order->sub_total, 0, ',', '.') }}
@@ -122,6 +121,53 @@
             </div>
         </section>
     </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="orderDetailsContent">
+                        <div class="mb-2"><strong>Transaction #:</strong> <span id="odTrx"></span></div>
+                        <div class="mb-2 d-flex flex-wrap">
+                            <div class="mr-4"><strong>Time:</strong> <span id="odTime"></span></div>
+                            <div class="mr-4"><strong>Payment:</strong> <span id="odPayment"></span></div>
+                            <div class="mr-4"><strong>Status:</strong> <span id="odStatus"></span></div>
+                            <div class="mr-4"><strong>Cashier:</strong> <span id="odCashier"></span></div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th class="text-center">Price</th>
+                                        <th class="text-center">Qty</th>
+                                        <th class="text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="odItems"></tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <div class="w-50">
+                                <hr/>
+                                <div class="d-flex justify-content-between font-weight-bold"><span>Total</span><span id="odTotal"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -130,4 +176,31 @@
 
     <!-- Page Specific JS File -->
     <script src="{{ asset('js/page/features-posts.js') }}"></script>
+    <script>
+        function formatIDR(n){ if(n==null) return '-'; return (n).toLocaleString('id-ID'); }
+        function renderOrderModal(data){
+            document.getElementById('odTrx').textContent = data.transaction_number || data.id;
+            document.getElementById('odTime').textContent = data.transaction_time || '';
+            document.getElementById('odPayment').textContent = data.payment_method || '-';
+            document.getElementById('odStatus').textContent = (data.status||'-');
+            document.getElementById('odCashier').textContent = data.cashier || '-';
+            document.getElementById('odTotal').textContent = formatIDR(data.total_price||0);
+            const tbody = document.getElementById('odItems');
+            tbody.innerHTML='';
+            (data.items||[]).forEach(it=>{
+                const tr=document.createElement('tr');
+                tr.innerHTML = `<td>${it.product_name||'-'}</td>
+                                <td class="text-center">${formatIDR(it.price||0)}</td>
+                                <td class="text-center">${it.quantity||0}</td>
+                                <td class="text-right">${formatIDR(it.total_price||0)}</td>`;
+                tbody.appendChild(tr);
+            });
+            $('#orderDetailsModal').modal('show');
+        }
+        document.querySelectorAll('.js-order-details').forEach(a=>{
+            a.addEventListener('click', function(e){ e.preventDefault(); const url=this.getAttribute('data-url'); if(!url) return;
+                fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }}).then(r=>r.json()).then(renderOrderModal).catch(()=>alert('Gagal mengambil detail order'));
+            });
+        });
+    </script>
 @endpush

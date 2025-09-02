@@ -252,10 +252,6 @@
                                                 <thead>
                                                 <tr>
                                                     <th>Transaction Time</th>
-                                                    <th>Sub Total</th>
-                                                    <th>Discount</th>
-                                                    <th>Tax</th>
-                                                    <th>Service</th>
                                                     <th>Total Price</th>
                                                     <th>Total Item</th>
                                                     <th>Kasir</th>
@@ -265,19 +261,7 @@
                                                 @forelse ($orders as $order)
                                                     <tr>
                                                         <td>
-                                                            <a href="{{ route('order.show', $order->id) }}">{{ $order->transaction_time }}</a>
-                                                        </td>
-                                                        <td>
-                                                            {{ number_format($order->sub_total, 0, ',', '.') }}
-                                                        </td>
-                                                        <td>
-                                                            {{ number_format($order->discount_amount, 0, ',', '.') }}
-                                                        </td>
-                                                        <td>
-                                                            {{ number_format($order->tax, 0, ',', '.') }}
-                                                        </td>
-                                                        <td>
-                                                            {{ number_format($order->service_charge, 0, ',', '.') }}
+                                                            <a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">{{ $order->transaction_time }}</a>
                                                         </td>
                                                         <td>
                                                             {{ number_format($order->total_price, 0, ',', '.') }}
@@ -299,10 +283,6 @@
                                                 <tfoot>
                                                     <tr>
                                                         <th>Total</th>
-                                                        <th id="ftSubTotal"></th>
-                                                        <th id="ftDiscount"></th>
-                                                        <th id="ftTax"></th>
-                                                        <th id="ftService"></th>
                                                         <th id="ftTotalPrice"></th>
                                                         <th id="ftTotalItem"></th>
                                                         <th></th>
@@ -368,6 +348,27 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        function formatIDR(n){ if(n==null) return '-'; return (n).toLocaleString('id-ID'); }
+        function renderOrderModal(data){
+            const wrap = document.getElementById('orderDetailsModal'); if(!wrap) return;
+            document.getElementById('odTrx').textContent = data.transaction_number || data.id;
+            document.getElementById('odTime').textContent = data.transaction_time || '';
+            document.getElementById('odPayment').textContent = data.payment_method || '-';
+            document.getElementById('odStatus').textContent = (data.status||'-');
+            document.getElementById('odCashier').textContent = data.cashier || '-';
+            document.getElementById('odTotal').textContent = formatIDR(data.total_price||0);
+            const tbody = document.getElementById('odItems');
+            tbody.innerHTML='';
+            (data.items||[]).forEach(it=>{
+                const tr=document.createElement('tr');
+                tr.innerHTML = `<td>${it.product_name||'-'}</td>
+                                <td class="text-center">${formatIDR(it.price||0)}</td>
+                                <td class="text-center">${it.quantity||0}</td>
+                                <td class="text-right">${formatIDR(it.total_price||0)}</td>`;
+                tbody.appendChild(tr);
+            });
+            $('#orderDetailsModal').modal('show');
+        }
         function parseCurrency(str){ if(!str) return 0; return parseInt(String(str).replace(/[^0-9\-]/g,'')) || 0; }
         function toDateKey(str){ if(!str) return ''; const s= String(str).trim(); if(s.length>=10) return s.substring(0,10); return s; }
 
@@ -509,6 +510,9 @@
             const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
         }
 
+        // Hook order details links
+        document.addEventListener('click', function(e){ const a=e.target.closest('.js-order-details'); if(!a) return; e.preventDefault(); const url=a.getAttribute('data-url'); if(!url) return; fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(renderOrderModal).catch(()=>alert('Gagal mengambil detail order')); });
+
         $(function(){
             loadPrefs('report_order_filters');
             const table = $('#ordersTable').DataTable({ paging: true, info: true });
@@ -518,7 +522,7 @@
                     table.rows({ search:'applied' }).every(function(){
                         const $row = $(this.node()); const tds = $row.find('td');
                         const dateText = $(tds.get(0)).text(); const dateKey = toDateKey(dateText);
-                        const totalPrice = parseCurrency($(tds.get(5)).text());
+                        const totalPrice = parseCurrency($(tds.get(1)).text());
                         revByDate[dateKey] = (revByDate[dateKey] || 0) + totalPrice;
                         countByDate[dateKey] = (countByDate[dateKey] || 0) + 1;
                     });
@@ -531,19 +535,11 @@
                     ordersChart.update('none');
                 }
                 // footer totals
-                let sub=0, disc=0, tax=0, serv=0, tot=0, items=0;
+                let tot=0, items=0;
                 table.rows({search:'applied'}).every(function(){ const tds=$(this.node()).find('td');
-                    sub += parseCurrency($(tds.get(1)).text());
-                    disc += parseCurrency($(tds.get(2)).text());
-                    tax += parseCurrency($(tds.get(3)).text());
-                    serv += parseCurrency($(tds.get(4)).text());
-                    tot += parseCurrency($(tds.get(5)).text());
-                    items += parseInt($(tds.get(6)).text())||0;
+                    tot += parseCurrency($(tds.get(1)).text());
+                    items += parseInt($(tds.get(2)).text())||0;
                 });
-                $('#ftSubTotal').text(sub.toLocaleString('id-ID'));
-                $('#ftDiscount').text(disc.toLocaleString('id-ID'));
-                $('#ftTax').text(tax.toLocaleString('id-ID'));
-                $('#ftService').text(serv.toLocaleString('id-ID'));
                 $('#ftTotalPrice').text(tot.toLocaleString('id-ID'));
                 $('#ftTotalItem').text(items.toLocaleString('id-ID'));
             }
@@ -559,5 +555,50 @@
             });
             document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_order_filters'));
         });
+        // Modal markup (once per page)
     </script>
+
+    <div class="modal fade" id="orderDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2"><strong>Transaction #:</strong> <span id="odTrx"></span></div>
+                    <div class="mb-2 d-flex flex-wrap">
+                        <div class="mr-4"><strong>Time:</strong> <span id="odTime"></span></div>
+                        <div class="mr-4"><strong>Payment:</strong> <span id="odPayment"></span></div>
+                        <div class="mr-4"><strong>Status:</strong> <span id="odStatus"></span></div>
+                        <div class="mr-4"><strong>Cashier:</strong> <span id="odCashier"></span></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Price</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="odItems"></tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <div class="w-50">
+                            <hr/>
+                            <div class="d-flex justify-content-between font-weight-bold"><span>Total</span><span id="odTotal"></span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endpush
