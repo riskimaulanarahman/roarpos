@@ -3,6 +3,6 @@
         Copyright &copy; {{ date('Y') }} <div class="bullet"></div> Developer by Pinday
     </div>
     <div class="footer-right">
-        1.0.0
+        {{ config('app.version', '1.0.0') }}
     </div>
 </footer>

@@ -6,6 +6,7 @@ use App\Exports\ProductSalesExport;
 use App\Models\OrderItem;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\ReportDateRange;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -22,16 +23,22 @@ class ProductSalesController extends Controller
 
     public function productSales(Request $request)
     {
+        $resolved = ReportDateRange::fromRequest($request);
+        if (!$resolved['from'] || !$resolved['to']) {
+            $this->validate($request, [
+                'date_from' => 'required|date',
+                'date_to'   => 'required|date|after_or_equal:date_from',
+            ]);
+        }
 
-        $this->validate($request, [
-            'date_from' => 'required|date',
-            'date_to'   => 'required|date|after_or_equal:date_from',
-        ]);
-
-        $date_from  = $request->date_from;
-        $date_to    = $request->date_to;
+        $date_from  = $resolved['from'] ?? $request->date_from;
+        $date_to    = $resolved['to'] ?? $request->date_to;
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $weekInMonth = $request->input('week_in_month');
+        $lastDays = $request->input('last_days');
 
         $query = OrderItem::select(
             'products.id as product_id',
@@ -57,7 +64,7 @@ class ProductSalesController extends Controller
         $categories = Category::orderBy('name')->get(['id','name']);
         $products = Product::orderBy('name')->get(['id','name']);
 
-        return view('pages.product_sales.index', compact('totalProductSold', 'chart', 'date_from', 'date_to','categories','products','categoryId','productId'));
+        return view('pages.product_sales.index', compact('totalProductSold', 'chart', 'date_from', 'date_to','categories','products','categoryId','productId','year','month','weekInMonth','lastDays'));
     }
 
     public function download(Request $request)

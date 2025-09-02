@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Support\ReportDateRange;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -16,6 +17,17 @@ class ReportController extends Controller
 
     public function summary(Request $request)
     {
+        // Allow period-based filters as an alternative
+        if (!$request->filled('start_date') || !$request->filled('end_date')) {
+            $resolved = ReportDateRange::fromRequest($request);
+            if ($resolved['from'] && $resolved['to']) {
+                $request->merge([
+                    'start_date' => $resolved['from'],
+                    'end_date' => $resolved['to'],
+                ]);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'start_date' => 'required|date_format:Y-m-d',
             'end_date' => 'required|date_format:Y-m-d|after_or_equal:start_date',
@@ -67,6 +79,17 @@ class ReportController extends Controller
 
     public function productSales(Request $request)
     {
+        // Allow period-based filters as an alternative
+        if (!$request->filled('start_date') || !$request->filled('end_date')) {
+            $resolved = ReportDateRange::fromRequest($request);
+            if ($resolved['from'] && $resolved['to']) {
+                $request->merge([
+                    'start_date' => $resolved['from'],
+                    'end_date' => $resolved['to'],
+                ]);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'start_date' => 'required|date_format:Y-m-d',
             'end_date' => 'required|date_format:Y-m-d|after_or_equal:start_date',

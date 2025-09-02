@@ -40,13 +40,18 @@
                                     </div>
                                 </div>
                                 <div class="float-right mt-2">
-                                    <form method="GET" action="{{ route('category.index') }}">
+                                    <form method="GET" action="{{ route('category.index') }}" class="form-inline">
                                         <div class="input-group">
-                                            <input type="text" class="form-control" placeholder="Search" name="name">
+                                            <input type="text" class="form-control" placeholder="Search name..." name="name" value="{{ request('name') }}">
                                             <div class="input-group-append">
                                                 <button class="btn btn-primary"><i class="fas fa-search"></i></button>
                                             </div>
                                         </div>
+                                        @if (request()->filled('name'))
+                                            <a href="{{ route('category.index') }}" class="btn btn-outline-secondary ml-2">
+                                                <i class="fas fa-undo"></i> Reset
+                                            </a>
+                                        @endif
                                     </form>
                                 </div>
                                 <div class="clearfix mb-3"></div>

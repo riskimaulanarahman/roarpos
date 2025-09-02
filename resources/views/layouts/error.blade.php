@@ -48,7 +48,7 @@
                 @yield('main')
 
                 <!-- Footer -->
-                @include('components.error-footer')
+                @include('components.footer')
             </div>
         </section>
     </div>

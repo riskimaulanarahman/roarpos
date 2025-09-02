@@ -33,6 +33,10 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
+        // Bind custom views for Fortify flows
+        Fortify::requestPasswordResetLinkView(fn () => view('pages.auth.forgot-password'));
+        Fortify::resetPasswordView(fn ($request) => view('pages.auth.reset-password', ['request' => $request]));
+
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())) . '|' . $request->ip());
 

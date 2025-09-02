@@ -13,14 +13,27 @@ class ProductController extends Controller
     {
         $userId = auth()->id();
 
-        $products = Product::with('category')->when($request->input('name'), function ($query, $name) {
-            return $query->where('name', 'like', '%' . $name . '%');
-        })
-        ->orderBy('created_at', 'desc')
-        ->where('user_id', $userId)
-        ->paginate(10);
+        $query = Product::with('category')
+            ->where('user_id', $userId);
 
-        return view('pages.products.index', compact('products'));
+        if ($name = $request->input('name')) {
+            $query->where('name', 'like', '%' . $name . '%');
+        }
+
+        if ($categoryId = $request->input('category_id')) {
+            $query->where('category_id', $categoryId);
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $products = $query
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        $categories = \App\Models\Category::where('user_id', $userId)
+            ->orderBy('name', 'asc')
+            ->get();
+
+        return view('pages.products.index', compact('products', 'categories'));
     }
 
     public function create()

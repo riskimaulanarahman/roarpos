@@ -44,13 +44,26 @@
                                     </div>
                                 </div>
                                 <div class="float-right mt-2">
-                                    <form method="GET" action="{{ route('product.index') }}">
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" placeholder="Search" name="name">
-                                            <div class="input-group-append">
-                                                <button class="btn btn-primary"><i class="fas fa-search"></i></button>
-                                            </div>
+                                    <form method="GET" action="{{ route('product.index') }}" class="form-inline">
+                                        <div class="form-group mr-2">
+                                            <select name="category_id" class="form-control selectric">
+                                                <option value="">All Categories</option>
+                                                @isset($categories)
+                                                    @foreach ($categories as $category)
+                                                        <option value="{{ $category->id }}" {{ (string) request('category_id') === (string) $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
+                                                    @endforeach
+                                                @endisset
+                                            </select>
                                         </div>
+                                        <div class="input-group mr-2">
+                                            <input type="text" class="form-control" placeholder="Search name..." name="name" value="{{ request('name') }}">
+                                        </div>
+                                        <button class="btn btn-primary"><i class="fas fa-search"></i></button>
+                                        @if (request()->filled('name') || request()->filled('category_id'))
+                                            <a href="{{ route('product.index') }}" class="btn btn-outline-secondary ml-2">
+                                                <i class="fas fa-undo"></i> Reset
+                                            </a>
+                                        @endif
                                     </form>
                                 </div>
 

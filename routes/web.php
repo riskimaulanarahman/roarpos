@@ -25,8 +25,11 @@ use Illuminate\Support\Facades\Artisan;
 */
 
 Route::get('/', function () {
-    return view('pages.auth.login');
-});
+    // Jika sudah login, redirect ke home; jika belum, tampilkan halaman login
+    return auth()->check()
+        ? redirect()->route('home')
+        : view('pages.auth.login');
+})->middleware('guest');
 
 Route::get('/run-worker', function () {
     try {
@@ -48,7 +51,7 @@ Route::middleware(['auth'])->group(function () {
 
     
 
-    Route::resource('user', UserController::class);
+    Route::resource('user', UserController::class)->middleware('role:admin');
     Route::resource('product', \App\Http\Controllers\ProductController::class);
     Route::resource('order', \App\Http\Controllers\OrderController::class);
     Route::resource('category', \App\Http\Controllers\CategoryController::class);

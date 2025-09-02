@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\ReportDateRange;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,17 +23,26 @@ class SummaryController extends Controller
 
     public function filterSummary(Request $request)
     {
-        $this->validate($request, [
-            'date_from'  => 'required|date',
-            'date_to'    => 'required|date|after_or_equal:date_from',
-        ]);
+        // Resolve date range from new period filters (fallback to old behavior)
+        $resolved = ReportDateRange::fromRequest($request);
+        if (!$resolved['from'] || !$resolved['to']) {
+            $this->validate($request, [
+                'date_from'  => 'required|date',
+                'date_to'    => 'required|date|after_or_equal:date_from',
+            ]);
+        }
 
-        $date_from  = $request->date_from;
-        $date_to    = $request->date_to;
+        $date_from  = $resolved['from'] ?? $request->date_from;
+        $date_to    = $resolved['to'] ?? $request->date_to;
         $status = $request->input('status');
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
+        $period = $request->input('period');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $weekInMonth = $request->input('week_in_month');
+        $lastDays = $request->input('last_days');
 
         $query = Order::query()
             ->whereDate('created_at', '>=', $date_from)
@@ -66,7 +76,6 @@ class SummaryController extends Controller
         $total = $totalSubtotal - $totalDiscount + $totalTax + $totalServiceCharge;
 
         // Trend: respect period
-        $period = $request->input('period');
         $selectExpr = DB::raw('DATE(created_at) as bucket');
         $groupExpr = DB::raw('DATE(created_at)');
         if ($period === 'mingguan') {
@@ -118,7 +127,7 @@ class SummaryController extends Controller
         return view('pages.summary.index', compact(
             'totalRevenue', 'totalDiscount', 'totalTax', 'totalServiceCharge', 'totalSubtotal', 'total',
             'chartTrend', 'composition', 'date_from', 'date_to', 'paymentMethods','statuses','categories','products',
-            'status','paymentMethod','categoryId','productId'
+            'status','paymentMethod','categoryId','productId','period','year','month','weekInMonth','lastDays'
         ));
     }
 }

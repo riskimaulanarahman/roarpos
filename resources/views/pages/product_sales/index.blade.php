@@ -34,32 +34,81 @@
                                     <div class="row">
                                         <div class="col-md-3">
                                             <div class="form-group">
-                                                <label>Dari Tanggal</label>
-                                                <input type="date" name="date_from"
-                                                    value="{{ old('date_from') ?? ($date_from ?? request()->query('date_from')) }}"
-                                                    class="form-control datepicker">
-                                            </div>
-                                            @error('date_from')<div class="alert alert-danger">{{ $message }}</div>@enderror
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label>Ke Tanggal</label>
-                                                <input type="date" name="date_to"
-                                                    value="{{ old('date_to') ?? ($date_to ?? request()->query('date_to')) }}"
-                                                    class="form-control datepicker">
-                                            </div>
-                                            @error('date_to')<div class="alert alert-danger">{{ $message }}</div>@enderror
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label>Periode</label>
+                                                <label>Periode <span class="text-muted" title="Pilih periode terlebih dahulu, lalu filter lainnya akan muncul">?</span></label>
                                                 <select name="period" class="form-control" id="periodSelectPS">
-                                                    <option value="">Custom</option>
                                                     <option value="harian" {{ request('period')=='harian' ? 'selected' : '' }}>Harian</option>
                                                     <option value="mingguan" {{ request('period')=='mingguan' ? 'selected' : '' }}>Mingguan</option>
                                                     <option value="bulanan" {{ request('period')=='bulanan' ? 'selected' : '' }}>Bulanan</option>
                                                     <option value="tahunan" {{ request('period')=='tahunan' ? 'selected' : '' }}>Tahunan</option>
                                                 </select>
+                                            </div>
+                                        </div>
+                                        <div id="dateRangeContainerPS" class="col-md-5">
+                                            <div class="form-row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Dari Tanggal</label>
+                                                        <input type="date" name="date_from"
+                                                            value="{{ old('date_from') ?? ($date_from ?? request()->query('date_from')) }}"
+                                                            class="form-control datepicker">
+                                                    </div>
+                                                    @error('date_from')<div class="alert alert-danger">{{ $message }}</div>@enderror
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Ke Tanggal</label>
+                                                        <input type="date" name="date_to"
+                                                            value="{{ old('date_to') ?? ($date_to ?? request()->query('date_to')) }}"
+                                                            class="form-control datepicker">
+                                                    </div>
+                                                    @error('date_to')<div class="alert alert-danger">{{ $message }}</div>@enderror
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2" id="yearColPS" style="display:none;">
+                                            <div class="form-group">
+                                                <label>Tahun</label>
+                                                @php($currentYear = (int) (old('year') ?? ($year ?? request('year') ?? now()->year)))
+                                                <select name="year" id="yearSelectPS" class="form-control">
+                                                    @for($y = $currentYear + 1; $y >= $currentYear - 5; $y--)
+                                                        <option value="{{ $y }}" {{ $currentYear==$y ? 'selected' : '' }}>{{ $y }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2" id="monthColPS" style="display:none;">
+                                            <div class="form-group">
+                                                <label>Bulan</label>
+                                                @php($currentMonth = (int) (old('month') ?? ($month ?? request('month') ?? now()->month)))
+                                                @php($monthNames = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'])
+                                                <select name="month" id="monthSelectPS" class="form-control">
+                                                    @for($m=1;$m<=12;$m++)
+                                                        <option value="{{ $m }}" {{ $currentMonth==$m ? 'selected' : '' }}>{{ $monthNames[$m] }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2" id="weekColPS" style="display:none;">
+                                            <div class="form-group">
+                                                <label>Opsi Mingguan</label>
+                                                <select id="weekOptionSelectPS" class="form-control">
+                                                    <option value="">Pilih...</option>
+                                                    <optgroup label="Minggu di Bulan">
+                                                        <option value="w1" {{ (request('week_in_month')=='w1')?'selected':'' }}>Minggu ke-1</option>
+                                                        <option value="w2" {{ (request('week_in_month')=='w2')?'selected':'' }}>Minggu ke-2</option>
+                                                        <option value="w3" {{ (request('week_in_month')=='w3')?'selected':'' }}>Minggu ke-3</option>
+                                                        <option value="w4" {{ (request('week_in_month')=='w4')?'selected':'' }}>Minggu ke-4</option>
+                                                        <option value="w5" {{ (request('week_in_month')=='w5')?'selected':'' }}>Minggu ke-5</option>
+                                                    </optgroup>
+                                                    <optgroup label="Hari Terakhir">
+                                                        <option value="last_7" {{ (request('last_days')=='7')?'selected':'' }}>7 hari terakhir</option>
+                                                        <option value="last_14" {{ (request('last_days')=='14')?'selected':'' }}>14 hari terakhir</option>
+                                                        <option value="last_21" {{ (request('last_days')=='21')?'selected':'' }}>21 hari terakhir</option>
+                                                        <option value="last_28" {{ (request('last_days')=='28')?'selected':'' }}>28 hari terakhir</option>
+                                                    </optgroup>
+                                                </select>
+                                                <input type="hidden" name="week_in_month" id="weekInMonthInputPS" value="{{ request('week_in_month') }}">
+                                                <input type="hidden" name="last_days" id="lastDaysInputPS" value="{{ request('last_days') }}">
                                             </div>
                                         </div>
                                         <div class="col-md-3">
@@ -108,6 +157,10 @@
                                             @php($p = ($products ?? collect())->firstWhere('id', request('product_id')))
                                             @if($p) @php($chips[] = 'Produk: '.$p->name) @endif
                                         @endif
+                                        @if(request('year')) @php($chips[] = 'Tahun: '.request('year')) @endif
+                                        @if(request('month')) @php($chips[] = 'Bulan: '.($monthNames[(int)request('month')] ?? request('month'))) @endif
+                                        @if(request('week_in_month')) @php($chips[] = 'Minggu: '.strtoupper(request('week_in_month'))) @endif
+                                        @if(request('last_days')) @php($chips[] = 'Terakhir: '.request('last_days').' hari') @endif
                                         @if(count($chips))
                                             <div>
                                                 @foreach($chips as $chip)
@@ -240,19 +293,47 @@
                 options: { responsive: true, scales: { y1:{ type:'linear', position:'left', title:{ display:true, text:'Qty'} }, y2:{ type:'linear', position:'right', grid:{ drawOnChartArea:false}, title:{ display:true, text:'Revenue'} } } }
             });
         }
-        function computeRange(period){
+        function computeRangeAdvancedPS(period, year, month, weekOpt){
             const pad=n=>String(n).padStart(2,'0');
             const toStr=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-            const now=new Date(); let s,e;
-            if(period==='harian'){ s=new Date(now.getFullYear(),now.getMonth(),now.getDate()); e=new Date(s); }
-            else if(period==='mingguan'){ const day=(now.getDay()+6)%7; s=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day); e=new Date(s); e.setDate(s.getDate()+6); }
-            else if(period==='bulanan'){ s=new Date(now.getFullYear(),now.getMonth(),1); e=new Date(now.getFullYear(),now.getMonth()+1,0); }
-            else if(period==='tahunan'){ s=new Date(now.getFullYear(),0,1); e=new Date(now.getFullYear(),11,31); }
-            else return null; return {from:toStr(s), to:toStr(e)};
+            const clampMonth=(y,m)=>{ const s=new Date(y,m-1,1); const e=new Date(y,m,0); return {s,e}; };
+            if(!period) return null;
+            if(period==='harian'){ const {s,e}=clampMonth(year,month); return {from:toStr(s), to:toStr(e)}; }
+            if(period==='mingguan'){
+                if(weekOpt && weekOpt.startsWith('last_')){ const days=parseInt(weekOpt.split('_')[1]); const today=new Date(); const to=new Date(today.getFullYear(),today.getMonth(),today.getDate()); const from=new Date(to); from.setDate(to.getDate()-(days-1)); return {from:toStr(from), to:toStr(to)}; }
+                const idx=weekOpt && weekOpt.startsWith('w') ? parseInt(weekOpt.slice(1)) : 1;
+                const firstDay=new Date(year,month-1,1); const firstMonday=new Date(firstDay); const day=firstMonday.getDay(); const diff=(day===0?1:(day===1?0:(8-day))); firstMonday.setDate(1+diff);
+                const start=new Date(firstMonday); start.setDate(firstMonday.getDate()+7*(idx-1)); const end=new Date(start); end.setDate(start.getDate()+6);
+                const {s:ms,e:me}=clampMonth(year,month); const s=start<ms?ms:start; const e=end>me?me:end; return {from:toStr(s), to:toStr(e)};
+            }
+            if(period==='bulanan'){ const {s,e}=clampMonth(year,month); return {from:toStr(s), to:toStr(e)}; }
+            if(period==='tahunan'){ const s=new Date(year,0,1); const e=new Date(year,11,31); return {from:toStr(s), to:toStr(e)}; }
+            return null;
         }
-        document.getElementById('periodSelectPS')?.addEventListener('change', function(){
-            const r=computeRange(this.value); if(!r) return; const df=document.querySelector('input[name="date_from"]'); const dt=document.querySelector('input[name="date_to"]'); if(df) df.value=r.from; if(dt) dt.value=r.to;
-        });
+        function updateVisibilityPS(){
+            const period=document.getElementById('periodSelectPS')?.value||'';
+            const yc=document.getElementById('yearColPS'); const mc=document.getElementById('monthColPS'); const wc=document.getElementById('weekColPS'); const dr=document.getElementById('dateRangeContainerPS');
+            const toggleOthers=(show)=>{
+                ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=document.querySelector(`[name="${n}"]`); if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12'); if(col) col.style.display = show ? '' : 'none'; });
+            };
+            if(!period){ if(yc) yc.style.display='none'; if(mc) mc.style.display='none'; if(wc) wc.style.display='none'; if(dr) dr.style.display='none'; toggleOthers(false); return; }
+            toggleOthers(true);
+            if(yc) yc.style.display='block'; if(mc) mc.style.display = (period==='tahunan') ? 'none' : 'block'; if(wc) wc.style.display = (period==='mingguan') ? 'block' : 'none'; if(dr) dr.style.display = (period==='harian') ? 'block' : 'none';
+        }
+        function recomputeRangePS(){
+            const period=document.getElementById('periodSelectPS')?.value||'';
+            const year=parseInt(document.getElementById('yearSelectPS')?.value||'{{ now()->year }}');
+            const month=parseInt(document.getElementById('monthSelectPS')?.value||'{{ now()->month }}');
+            const weekOpt=document.getElementById('weekOptionSelectPS')?.value||'';
+            const r=computeRangeAdvancedPS(period,year,month,weekOpt); if(!r) return;
+            const df=document.querySelector('input[name="date_from"]'); const dt=document.querySelector('input[name="date_to"]'); if(df && r.from) df.value=r.from; if(dt && r.to) dt.value=r.to;
+            const wim=document.getElementById('weekInMonthInputPS'); const ld=document.getElementById('lastDaysInputPS'); if(wim) wim.value=(weekOpt.startsWith('w')?weekOpt:''); if(ld) ld.value=(weekOpt.startsWith('last_')?weekOpt.split('_')[1]:'');
+        }
+        document.getElementById('periodSelectPS')?.addEventListener('change', ()=>{ updateVisibilityPS(); recomputeRangePS(); });
+        document.getElementById('yearSelectPS')?.addEventListener('change', recomputeRangePS);
+        document.getElementById('monthSelectPS')?.addEventListener('change', recomputeRangePS);
+        document.getElementById('weekOptionSelectPS')?.addEventListener('change', recomputeRangePS);
+        updateVisibilityPS(); if(document.getElementById('periodSelectPS')?.value){ recomputeRangePS(); }
 
         function savePrefs(prefix){ const f=document.querySelector('form'); const names=['date_from','date_to','period','category_id','product_id']; const data={}; names.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; }); localStorage.setItem(prefix, JSON.stringify(data)); }
         function loadPrefs(prefix){ const q=new URLSearchParams(location.search); if([...q.keys()].length) return; const raw=localStorage.getItem(prefix); if(!raw) return; const data=JSON.parse(raw); Object.entries(data).forEach(([k,v])=>{ const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v; }); }

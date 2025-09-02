@@ -34,36 +34,85 @@
                                     <div class="row">
                                         <div class="col-md-3">
                                             <div class="form-group">
-                                                <label>Dari Tanggal</label>
-                                                <input type="date" name="date_from"
-                                                    value="{{ old('date_from') ?? ($date_from ?? request()->query('date_from')) }}"
-                                                    class="form-control datepicker">
-                                            </div>
-                                            @error('date_from')
-                                                <div class="alert alert-danger">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label>Ke Tanggal</label>
-                                                <input type="date" name="date_to"
-                                                    value="{{ old('date_to') ?? ($date_to ?? request()->query('date_to')) }}"
-                                                    class="form-control datepicker">
-                                            </div>
-                                            @error('date_to')
-                                                <div class="alert alert-danger">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label>Periode</label>
+                                            <label>Periode <span class="text-muted" title="Pilih periode terlebih dahulu, lalu filter lainnya akan muncul">?</span></label>
                                                 <select name="period" class="form-control" id="periodSelect">
-                                                    <option value="">Custom</option>
-                                                    <option value="harian" {{ request('period')=='harian' ? 'selected' : '' }}>Harian (Hari ini)</option>
-                                                    <option value="mingguan" {{ request('period')=='mingguan' ? 'selected' : '' }}>Mingguan (Minggu ini)</option>
-                                                    <option value="bulanan" {{ request('period')=='bulanan' ? 'selected' : '' }}>Bulanan (Bulan ini)</option>
-                                                    <option value="tahunan" {{ request('period')=='tahunan' ? 'selected' : '' }}>Tahunan (Tahun ini)</option>
+                                                    <option value="harian" {{ request('period')=='harian' ? 'selected' : '' }}>Harian</option>
+                                                    <option value="mingguan" {{ request('period')=='mingguan' ? 'selected' : '' }}>Mingguan</option>
+                                                    <option value="bulanan" {{ request('period')=='bulanan' ? 'selected' : '' }}>Bulanan</option>
+                                                    <option value="tahunan" {{ request('period')=='tahunan' ? 'selected' : '' }}>Tahunan</option>
                                                 </select>
+                                            </div>
+                                        </div>
+                                        <div id="dateRangeContainer" class="col-md-5">
+                                            <div class="form-row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Dari Tanggal</label>
+                                                        <input type="date" name="date_from"
+                                                            value="{{ old('date_from') ?? ($date_from ?? request()->query('date_from')) }}"
+                                                            class="form-control datepicker">
+                                                    </div>
+                                                    @error('date_from')
+                                                        <div class="alert alert-danger">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>Ke Tanggal</label>
+                                                        <input type="date" name="date_to"
+                                                            value="{{ old('date_to') ?? ($date_to ?? request()->query('date_to')) }}"
+                                                            class="form-control datepicker">
+                                                    </div>
+                                                    @error('date_to')
+                                                        <div class="alert alert-danger">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2" id="yearCol" style="display:none;">
+                                            <div class="form-group">
+                                                <label>Tahun</label>
+                                                @php($currentYear = (int) (old('year') ?? ($year ?? request('year') ?? now()->year)))
+                                                <select name="year" id="yearSelect" class="form-control">
+                                                    @for($y = $currentYear + 1; $y >= $currentYear - 5; $y--)
+                                                        <option value="{{ $y }}" {{ $currentYear==$y ? 'selected' : '' }}>{{ $y }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2" id="monthCol" style="display:none;">
+                                            <div class="form-group">
+                                                <label>Bulan</label>
+                                                @php($currentMonth = (int) (old('month') ?? ($month ?? request('month') ?? now()->month)))
+                                                @php($monthNames = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'])
+                                                <select name="month" id="monthSelect" class="form-control">
+                                                    @for($m=1;$m<=12;$m++)
+                                                        <option value="{{ $m }}" {{ $currentMonth==$m ? 'selected' : '' }}>{{ $monthNames[$m] }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2" id="weekCol" style="display:none;">
+                                            <div class="form-group">
+                                                <label>Opsi Mingguan</label>
+                                                <select id="weekOptionSelect" class="form-control">
+                                                    <option value="">Pilih...</option>
+                                                    <optgroup label="Minggu di Bulan">
+                                                        <option value="w1" {{ (request('week_in_month')=='w1')?'selected':'' }}>Minggu ke-1</option>
+                                                        <option value="w2" {{ (request('week_in_month')=='w2')?'selected':'' }}>Minggu ke-2</option>
+                                                        <option value="w3" {{ (request('week_in_month')=='w3')?'selected':'' }}>Minggu ke-3</option>
+                                                        <option value="w4" {{ (request('week_in_month')=='w4')?'selected':'' }}>Minggu ke-4</option>
+                                                        <option value="w5" {{ (request('week_in_month')=='w5')?'selected':'' }}>Minggu ke-5</option>
+                                                    </optgroup>
+                                                    <optgroup label="Hari Terakhir">
+                                                        <option value="last_7" {{ (request('last_days')=='7')?'selected':'' }}>7 hari terakhir</option>
+                                                        <option value="last_14" {{ (request('last_days')=='14')?'selected':'' }}>14 hari terakhir</option>
+                                                        <option value="last_21" {{ (request('last_days')=='21')?'selected':'' }}>21 hari terakhir</option>
+                                                        <option value="last_28" {{ (request('last_days')=='28')?'selected':'' }}>28 hari terakhir</option>
+                                                    </optgroup>
+                                                </select>
+                                                <input type="hidden" name="week_in_month" id="weekInMonthInput" value="{{ request('week_in_month') }}">
+                                                <input type="hidden" name="last_days" id="lastDaysInput" value="{{ request('last_days') }}">
                                             </div>
                                         </div>
                                         <div class="col-md-2">
@@ -131,6 +180,10 @@
                                     @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
                                     @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
                                     @if(request('payment_method')) @php($chips[] = 'Metode: '.ucfirst(request('payment_method'))) @endif
+                                    @if(request('year')) @php($chips[] = 'Tahun: '.request('year')) @endif
+                                    @if(request('month')) @php($chips[] = 'Bulan: '.($monthNames[(int)request('month')] ?? request('month'))) @endif
+                                    @if(request('week_in_month')) @php($chips[] = 'Minggu: '.strtoupper(request('week_in_month'))) @endif
+                                    @if(request('last_days')) @php($chips[] = 'Terakhir: '.request('last_days').' hari') @endif
                                     @if(request('category_id'))
                                         @php($c = ($categories ?? collect())->firstWhere('id', request('category_id')))
                                         @if($c) @php($chips[] = 'Kategori: '.$c->name) @endif
@@ -335,34 +388,106 @@
             });
         }
 
-        function computeRange(period){
+        function computeRangeAdvanced(period, year, month, weekOpt){
             const pad=n=>String(n).padStart(2,'0');
             const toStr=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-            const now=new Date();
-            let start,end;
+            const clampMonth=(y,m)=>{ const s=new Date(y,m-1,1); const e=new Date(y,m,0); return {s,e}; };
+
+            if(!period) return null;
             if(period==='harian'){
-                start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-                end=new Date(start);
-            }else if(period==='mingguan'){
-                const day=(now.getDay()+6)%7; // Senin=0
-                start=new Date(now.getFullYear(),now.getMonth(),now.getDate()-day);
-                end=new Date(start); end.setDate(start.getDate()+6);
-            }else if(period==='bulanan'){
-                start=new Date(now.getFullYear(),now.getMonth(),1);
-                end=new Date(now.getFullYear(),now.getMonth()+1,0);
-            }else if(period==='tahunan'){
-                start=new Date(now.getFullYear(),0,1);
-                end=new Date(now.getFullYear(),11,31);
-            }else{ return null; }
-            return { from: toStr(start), to: toStr(end) };
+                // default to full selected month
+                const {s,e} = clampMonth(year, month);
+                return { from: toStr(s), to: toStr(e) };
+            }
+            if(period==='mingguan'){
+                if(weekOpt && weekOpt.startsWith('last_')){
+                    const days = parseInt(weekOpt.split('_')[1]);
+                    const now=new Date();
+                    const to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const from = new Date(to); from.setDate(to.getDate() - (days-1));
+                    return { from: toStr(from), to: toStr(to), lastDays: days };
+                }
+                // week within month: w1..w5
+                const idx = weekOpt && weekOpt.startsWith('w') ? parseInt(weekOpt.slice(1)) : 1;
+                const firstDay = new Date(year, month-1, 1);
+                // first Monday of the month
+                const firstMonday = new Date(firstDay);
+                const day = firstMonday.getDay(); // 0 Sun .. 6 Sat
+                const diffToMon = (day===0?1: (day===1?0: (8-day)));
+                firstMonday.setDate(1 + diffToMon);
+                const start = new Date(firstMonday); start.setDate(firstMonday.getDate() + 7*(idx-1));
+                const end = new Date(start); end.setDate(start.getDate()+6);
+                const {s:ms, e:me} = clampMonth(year, month);
+                const s = start < ms ? ms : start;
+                const e = end > me ? me : end;
+                return { from: toStr(s), to: toStr(e) };
+            }
+            if(period==='bulanan'){
+                const {s,e} = clampMonth(year, month); return { from: toStr(s), to: toStr(e) };
+            }
+            if(period==='tahunan'){
+                const s = new Date(year,0,1); const e = new Date(year,11,31); return { from: toStr(s), to: toStr(e) };
+            }
+            return null;
         }
 
-        document.getElementById('periodSelect')?.addEventListener('change', function(){
-            const r=computeRange(this.value); if(!r) return; 
+        function updateVisibility(){
+            const period = document.getElementById('periodSelect')?.value || '';
+            const yearCol = document.getElementById('yearCol');
+            const monthCol = document.getElementById('monthCol');
+            const weekCol = document.getElementById('weekCol');
+            const dateRange = document.getElementById('dateRangeContainer');
+            const toggleOthers = (show)=>{
+                ['status','payment_method','category_id','product_id'].forEach(n=>{
+                    const el=document.querySelector(`[name="${n}"]`);
+                    if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12');
+                    if(col) col.style.display = show ? '' : 'none';
+                });
+            };
+            if(!period){ // belum pilih periode => sembunyikan semua selain periode
+                if(yearCol) yearCol.style.display='none';
+                if(monthCol) monthCol.style.display='none';
+                if(weekCol) weekCol.style.display='none';
+                if(dateRange) dateRange.style.display='none';
+                toggleOthers(false);
+                return;
+            }
+            toggleOthers(true);
+            if(yearCol) yearCol.style.display='block';
+            if(monthCol) monthCol.style.display = (period==='tahunan') ? 'none' : 'block';
+            if(weekCol) weekCol.style.display = (period==='mingguan') ? 'block' : 'none';
+            if(dateRange) dateRange.style.display = (period==='harian') ? 'block' : 'none';
+        }
+
+        function recomputeRange(){
+            const period = document.getElementById('periodSelect')?.value || '';
+            const year = parseInt(document.getElementById('yearSelect')?.value || '{{ now()->year }}');
+            const month = parseInt(document.getElementById('monthSelect')?.value || '{{ now()->month }}');
+            const weekOpt = document.getElementById('weekOptionSelect')?.value || '';
+            const r = computeRangeAdvanced(period, year, month, weekOpt);
+            if(!r) return;
             const df=document.querySelector('input[name="date_from"]');
             const dt=document.querySelector('input[name="date_to"]');
-            if(df) df.value=r.from; if(dt) dt.value=r.to;
-        });
+            if(df && r.from) df.value=r.from;
+            if(dt && r.to) dt.value=r.to;
+            // sync hidden weekly inputs
+            const wim = document.getElementById('weekInMonthInput');
+            const ld = document.getElementById('lastDaysInput');
+            if(wim) wim.value = (weekOpt.startsWith('w') ? weekOpt : '');
+            if(ld) ld.value = (weekOpt.startsWith('last_') ? weekOpt.split('_')[1] : '');
+        }
+
+        document.getElementById('periodSelect')?.addEventListener('change', ()=>{ updateVisibility(); recomputeRange(); });
+        document.getElementById('yearSelect')?.addEventListener('change', recomputeRange);
+        document.getElementById('monthSelect')?.addEventListener('change', recomputeRange);
+        document.getElementById('weekOptionSelect')?.addEventListener('change', recomputeRange);
+
+        // Initialize on load
+        updateVisibility();
+        // If period preselected, compute initial range only when not custom
+        if(document.getElementById('periodSelect')?.value){
+            recomputeRange();
+        }
 
         function savePrefs(prefix){
             const f=document.querySelector('form[action*="filter"]')||document.querySelector('form'); if(!f) return;

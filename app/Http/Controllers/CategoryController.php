@@ -11,9 +11,18 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $categories = DB::table('categories')->when($request->input('name'), function ($query, $name) {
-            $query->where('name', 'like', '%' . $name . '%');
-        })->orderBy('created_at', 'desc')->paginate(10);
+        $userId = auth()->id();
+
+        $perPage = (int) $request->input('per_page', 10);
+
+        $categories = Category::query()
+            ->where('user_id', $userId)
+            ->when($request->input('name'), function ($query, $name) {
+                $query->where('name', 'like', '%' . $name . '%');
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
         return view('pages.categories.index' , compact('categories'));
     }
 

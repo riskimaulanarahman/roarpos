@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\ReportDateRange;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,17 +25,25 @@ class ReportController extends Controller
 
     public function filter(Request $request)
     {
-        $this->validate($request, [
-            'date_from'  => 'required|date',
-            'date_to'    => 'required|date|after_or_equal:date_from',
-        ]);
+        // Compute date range based on new period filters. Fallback to old validation if needed.
+        $resolved = ReportDateRange::fromRequest($request);
+        if (!$resolved['from'] || !$resolved['to']) {
+            $this->validate($request, [
+                'date_from'  => 'required|date',
+                'date_to'    => 'required|date|after_or_equal:date_from',
+            ]);
+        }
 
-        $date_from  = $request->date_from;
-        $date_to    = $request->date_to;
+        $date_from  = $resolved['from'] ?? $request->date_from;
+        $date_to    = $resolved['to'] ?? $request->date_to;
         $status = $request->input('status');
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $weekInMonth = $request->input('week_in_month');
+        $lastDays = $request->input('last_days');
 
         // Base query for reuse
         $baseQuery = Order::query()
@@ -141,7 +150,7 @@ class ReportController extends Controller
         $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
 
-        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','period'));
+        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','period','year','month','weekInMonth','lastDays'));
     }
 
     public function byCategory(Request $request)
@@ -151,12 +160,17 @@ class ReportController extends Controller
             'date_to' => 'nullable|date|after_or_equal:date_from',
         ]);
 
-        $date_from = $request->date_from;
-        $date_to = $request->date_to;
+        $resolved = ReportDateRange::fromRequest($request);
+        $date_from = $resolved['from'] ?? $request->date_from;
+        $date_to = $resolved['to'] ?? $request->date_to;
         $status = $request->input('status');
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $weekInMonth = $request->input('week_in_month');
+        $lastDays = $request->input('last_days');
 
         $categorySales = collect();
         $chart = null;
@@ -192,7 +206,7 @@ class ReportController extends Controller
         $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
 
-        return view('pages.report.by_category', compact('categorySales', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId'));
+        return view('pages.report.by_category', compact('categorySales', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','year','month','weekInMonth','lastDays'));
     }
 
     public function detail(Request $request)
@@ -202,8 +216,9 @@ class ReportController extends Controller
             'date_to' => 'nullable|date|after_or_equal:date_from',
         ]);
 
-        $date_from = $request->date_from;
-        $date_to = $request->date_to;
+        $resolved = ReportDateRange::fromRequest($request);
+        $date_from = $resolved['from'] ?? $request->date_from;
+        $date_to = $resolved['to'] ?? $request->date_to;
         $status = $request->input('status');
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
@@ -212,6 +227,10 @@ class ReportController extends Controller
         $items = collect();
         $chart = null;
         $period = $request->input('period');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $weekInMonth = $request->input('week_in_month');
+        $lastDays = $request->input('last_days');
         if ($date_from && $date_to) {
             $base = OrderItem::with(['order', 'product.category'])
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
@@ -269,7 +288,7 @@ class ReportController extends Controller
         $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
 
-        return view('pages.report.detail', compact('items', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId', 'period'));
+        return view('pages.report.detail', compact('items', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId', 'period','year','month','weekInMonth','lastDays'));
     }
 
     public function download(Request $request)
