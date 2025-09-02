@@ -211,6 +211,7 @@ class ReportController extends Controller
 
         $items = collect();
         $chart = null;
+        $period = $request->input('period');
         if ($date_from && $date_to) {
             $base = OrderItem::with(['order', 'product.category'])
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
