@@ -7,8 +7,10 @@ use App\Models\Discount;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Models\OrderItem;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -32,6 +34,19 @@ class DashboardController extends Controller
             ->whereDate('created_at', Carbon::today())
             ->sum('total_price');
 
+        // Produk terjual hari ini (nama produk dan jumlah)
+        $productSalesToday = OrderItem::select(
+                'products.name as product_name',
+                DB::raw('SUM(order_items.quantity) as total_quantity')
+            )
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->where('orders.user_id', $userId)
+            ->whereDate('orders.created_at', Carbon::today())
+            ->groupBy('products.name')
+            ->orderByDesc('total_quantity')
+            ->get();
+
         $month = date('m');
         $year = date('Y');
 
@@ -46,6 +61,7 @@ class DashboardController extends Controller
             // 'additional_charges',
             'orders',
             'totalPriceToday',
+            'productSalesToday',
             'data',
             'month',
             'year'
@@ -80,6 +96,19 @@ class DashboardController extends Controller
             ->whereDate('created_at', Carbon::today())
             ->sum('total_price');
 
+        // Produk terjual hari ini (nama produk dan jumlah) untuk halaman filter
+        $productSalesToday = OrderItem::select(
+                'products.name as product_name',
+                DB::raw('SUM(order_items.quantity) as total_quantity')
+            )
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->where('orders.user_id', $userId)
+            ->whereDate('orders.created_at', Carbon::today())
+            ->groupBy('products.name')
+            ->orderByDesc('total_quantity')
+            ->get();
+
         $data = $this->getMonthlyData($month, $year, $userId);
 
         return view('pages.dashboard', compact(
@@ -91,6 +120,7 @@ class DashboardController extends Controller
             'additional_charges',
             'orders',
             'totalPriceToday',
+            'productSalesToday',
             'data',
             'month',
             'year'

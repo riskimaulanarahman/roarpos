@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use App\Support\ReportDateRange;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -18,7 +19,8 @@ class SummaryController extends Controller
         $statuses = ['completed','refund','pending'];
         $categories = Category::orderBy('name')->get(['id','name']);
         $products = Product::orderBy('name')->get(['id','name']);
-        return view('pages.summary.index', compact('paymentMethods','statuses','categories','products'));
+        $users = User::orderBy('name')->get(['id','name']);
+        return view('pages.summary.index', compact('paymentMethods','statuses','categories','products','users'));
     }
 
     public function filterSummary(Request $request)
@@ -38,6 +40,7 @@ class SummaryController extends Controller
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
+        $userId = $request->input('user_id') ?: (auth()->id());
         $period = $request->input('period');
         $year = $request->input('year');
         $month = $request->input('month');
@@ -49,6 +52,7 @@ class SummaryController extends Controller
             ->whereDate('created_at', '<=', $date_to)
             ->when($status, fn($q) => $q->where('status', $status))
             ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
+            ->when($userId, fn($q) => $q->where('user_id', $userId))
             ->when($categoryId, function ($q) use ($categoryId) {
                 $q->whereExists(function ($sub) use ($categoryId) {
                     $sub->select(DB::raw(1))
@@ -123,11 +127,12 @@ class SummaryController extends Controller
         $statuses = ['completed','refund','pending'];
         $categories = Category::orderBy('name')->get(['id','name']);
         $products = Product::orderBy('name')->get(['id','name']);
+        $users = User::orderBy('name')->get(['id','name']);
 
         return view('pages.summary.index', compact(
             'totalRevenue', 'totalDiscount', 'totalTax', 'totalServiceCharge', 'totalSubtotal', 'total',
             'chartTrend', 'composition', 'date_from', 'date_to', 'paymentMethods','statuses','categories','products',
-            'status','paymentMethod','categoryId','productId','period','year','month','weekInMonth','lastDays'
+            'status','paymentMethod','categoryId','productId','period','year','month','weekInMonth','lastDays','userId','users'
         ));
     }
 }

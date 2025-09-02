@@ -201,6 +201,36 @@
                 </div>
             </div>
 
+            {{-- === PRODUK TERJUAL HARI INI (semua user) === --}}
+            <div>
+                <div class="col-12">
+                    <div class="card card-statistic-1">
+                        <div class="card-wrap">
+                            <div class="d-flex justify-content-between align-items-center m-4">
+                                <h4 style="color: #3949AB; font-weight: 600">Produk Terjual Hari Ini</h4>
+                            </div>
+                            <div class="clearfix mb-3"></div>
+                            @if(isset($productSalesToday) && $productSalesToday->count())
+                                <table class="table-striped table">
+                                    <tr>
+                                        <th>Produk</th>
+                                        <th>Jumlah</th>
+                                    </tr>
+                                    @foreach ($productSalesToday as $ps)
+                                        <tr>
+                                            <td>{{ $ps->product_name }}</td>
+                                            <td>{{ $ps->total_quantity }}</td>
+                                        </tr>
+                                    @endforeach
+                                </table>
+                            @else
+                                <div class="m-4 text-muted">Belum ada produk terjual hari ini.</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {{-- === GRAFIK SALES (semua user) === --}}
             <div>
                 <div class="row mt-4">

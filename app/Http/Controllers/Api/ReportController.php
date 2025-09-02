@@ -45,7 +45,8 @@ class ReportController extends Controller
 
         $query = Order::query()
             ->whereBetween('created_at', [$start_date, $end_date])
-            ->where('status', 'completed');
+            ->where('status', 'completed')
+            ->when(auth()->check(), fn($q) => $q->where('user_id', auth()->id()));
 
 
         $orders = $query->get();
@@ -118,6 +119,7 @@ class ReportController extends Controller
             })
             ->where('orders.status', 'completed')
             ->whereBetween('orders.created_at', [$start_date, $end_date])
+            ->when(auth()->check(), fn($q) => $q->where('orders.user_id', auth()->id()))
             ->groupBy('products.id', 'products.name', 'products.price')
             ->orderBy('total_quantity', 'desc');
 

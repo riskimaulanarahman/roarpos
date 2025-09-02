@@ -438,7 +438,7 @@
             const weekCol = document.getElementById('weekCol');
             const dateRange = document.getElementById('dateRangeContainer');
             const toggleOthers = (show)=>{
-                ['status','payment_method','category_id','product_id'].forEach(n=>{
+                ['status','payment_method','category_id','product_id','user_id'].forEach(n=>{
                     const el=document.querySelector(`[name="${n}"]`);
                     if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12');
                     if(col) col.style.display = show ? '' : 'none';

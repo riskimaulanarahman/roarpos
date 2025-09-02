@@ -290,7 +290,7 @@
             const period=document.getElementById('periodSelectCat')?.value||'';
             const yc=document.getElementById('yearColCat'); const mc=document.getElementById('monthColCat'); const wc=document.getElementById('weekColCat'); const dr=document.getElementById('dateRangeContainerCat');
             const toggleOthers=(show)=>{
-                ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=document.querySelector(`[name="${n}"]`); if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12'); if(col) col.style.display = show ? '' : 'none'; });
+                ['status','payment_method','category_id','product_id','user_id'].forEach(n=>{ const el=document.querySelector(`[name="${n}"]`); if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12'); if(col) col.style.display = show ? '' : 'none'; });
             };
             if(!period){ if(yc) yc.style.display='none'; if(mc) mc.style.display='none'; if(wc) wc.style.display='none'; if(dr) dr.style.display='none'; toggleOthers(false); return; }
             toggleOthers(true);
