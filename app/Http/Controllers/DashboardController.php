@@ -28,7 +28,7 @@ class DashboardController extends Controller
             ->where('user_id', $userId)
             ->whereDate('created_at', Carbon::today())
             ->orderBy('created_at', 'DESC')
-            ->paginate(10);
+            ->paginate(10, ['*'], 'orders_page');
 
         $totalPriceToday = Order::where('user_id', $userId)
             ->whereDate('created_at', Carbon::today())
@@ -53,7 +53,7 @@ class DashboardController extends Controller
             ->whereDate('orders.created_at', Carbon::today())
             ->groupBy('products.name')
             ->orderByDesc('total_quantity')
-            ->get();
+            ->paginate(10, ['*'], 'products_page');
 
         $month = date('m');
         $year = date('Y');
@@ -118,11 +118,11 @@ class DashboardController extends Controller
         // $discounts= Discount::count();
         // $additional_charges = \App\Models\AdditionalCharges::where('user_id', $userId)->count();
 
-        $orders = Order::with('kasir')
+        $orders = Order::with('user')
             ->where('user_id', $userId)
             ->whereDate('created_at', Carbon::today())
             ->orderBy('created_at', 'DESC')
-            ->paginate(10);
+            ->paginate(10, ['*'], 'orders_page');
 
         $totalPriceToday = Order::where('user_id', $userId)
             ->whereDate('created_at', Carbon::today())
@@ -147,7 +147,7 @@ class DashboardController extends Controller
             ->whereDate('orders.created_at', Carbon::today())
             ->groupBy('products.name')
             ->orderByDesc('total_quantity')
-            ->get();
+            ->paginate(10, ['*'], 'products_page');
 
         $data = $this->getMonthlyData($month, $year, $userId);
 

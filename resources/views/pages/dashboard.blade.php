@@ -257,6 +257,9 @@
                                         </tr>
                                     @endforeach
                                 </table>
+                                <div class="float-right mt-3">
+                                    {{ $productSalesToday->withQueryString()->links() }}
+                                </div>
                             @else
                                 <div class="m-4 text-muted">Belum ada produk terjual hari ini.</div>
                             @endif
