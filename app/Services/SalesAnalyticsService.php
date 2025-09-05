@@ -16,7 +16,7 @@ class SalesAnalyticsService
      * @param string|null $segmentBy payment_method|status|null
      * @return array{labels: array<int,string>, datasets: array<int, array{label: string, data: array<int,int>}>}
      */
-    public function timeseries(int $userId, string $from, string $to, string $bucket = 'day', ?string $segmentBy = null): array
+    public function timeseries(int $userId, string $from, string $to, string $bucket = 'day', ?string $segmentBy = null, ?string $status = null): array
     {
         [$selectExpr, $groupExpr, $labelFormatter] = $this->bucketExpr($bucket);
 
@@ -35,6 +35,7 @@ class SalesAnalyticsService
             ->selectRaw('SUM(total_price) as revenue')
             ->where('user_id', $userId)
             ->whereBetween(DB::raw('DATE(created_at)'), [$from, $to])
+            ->when($status, fn($q) => $q->where('status', $status))
             ->groupByRaw($segmentBy ? ($segmentBy === 'method_status' ? "$groupExpr, payment_method, status" : "$groupExpr, $segmentBy") : $groupExpr)
             ->orderBy('bucket');
 

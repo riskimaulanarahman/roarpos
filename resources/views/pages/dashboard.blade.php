@@ -274,6 +274,45 @@
                                 <h4>Grafik Sales</h4>
                             </div>
                             <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <div class="card card-statistic-1">
+                                            <div class="card-icon bg-success"><i class="fas fa-money-bill-wave"></i></div>
+                                            <div class="card-wrap">
+                                                <div class="card-header"><h4>Revenue (Completed)</h4></div>
+                                                <div class="card-body">{{ number_format($monthlyCompletedRevenue ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <div class="card card-statistic-1">
+                                            <div class="card-icon bg-primary"><i class="fas fa-receipt"></i></div>
+                                            <div class="card-wrap">
+                                                <div class="card-header"><h4>Orders (Completed)</h4></div>
+                                                <div class="card-body">{{ number_format($monthlyCompletedOrders ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <div class="card card-statistic-1">
+                                            <div class="card-icon bg-info"><i class="fas fa-divide"></i></div>
+                                            <div class="card-wrap">
+                                                <div class="card-header"><h4>AOV (Completed)</h4></div>
+                                                <div class="card-body">{{ number_format($monthlyAov ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-sm-6 mb-3">
+                                        <div class="card card-statistic-1">
+                                            <div class="card-icon bg-warning"><i class="fas fa-credit-card"></i></div>
+                                            <div class="card-wrap">
+                                                <div class="card-header"><h4>Payment Methods</h4></div>
+                                                <div class="card-body">{{ number_format($monthlyPaymentMethods ?? 0) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="card">
                                     <div class="card-body">
                                         <canvas id="grafikSalesChart"></canvas>
@@ -417,13 +456,14 @@
                 });
             });
 
-            // Render daily revenue in current month grouped by payment method + status
+            // Render daily revenue (current month), grouped by payment method, completed only
             const now = new Date();
             const params = {
                 period: 'harian',
                 year: now.getFullYear(),
                 month: now.getMonth() + 1,
-                segment_by: 'method_status'
+                segment_by: 'payment_method',
+                status: 'completed'
             };
             try { await renderSalesChart(params); } catch(e) { console.error(e); }
         });

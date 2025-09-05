@@ -60,6 +60,25 @@ class DashboardController extends Controller
 
         $data = $this->getMonthlyData($month, $year, $userId);
 
+        // Monthly summary for completed orders (current month)
+        $monthlyCompletedOrders = Order::where('user_id', $userId)
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->where('status', 'completed')
+            ->count();
+        $monthlyCompletedRevenue = Order::where('user_id', $userId)
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->where('status', 'completed')
+            ->sum('total_price');
+        $monthlyAov = $monthlyCompletedOrders > 0 ? round($monthlyCompletedRevenue / $monthlyCompletedOrders) : 0;
+        $monthlyPaymentMethods = Order::where('user_id', $userId)
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->where('status', 'completed')
+            ->distinct('payment_method')
+            ->count('payment_method');
+
         return view('pages.dashboard', compact(
             'users',
             'products',
@@ -73,7 +92,11 @@ class DashboardController extends Controller
             'paymentBreakdownToday',
             'data',
             'month',
-            'year'
+            'year',
+            'monthlyCompletedOrders',
+            'monthlyCompletedRevenue',
+            'monthlyAov',
+            'monthlyPaymentMethods'
         ));
     }
 

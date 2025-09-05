@@ -334,13 +334,14 @@ class ReportController extends Controller
         $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
         $isAdmin = auth()->user()?->roles === 'admin';
         $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
-        $status = $request->input('status');
+        // Force only completed status for this report
+        $status = 'completed';
         $methodFilter = $request->input('payment_method');
 
         $rows = Order::query()
             ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($status, fn($q) => $q->where('status', $status))
+            ->where('status', $status)
             ->when($methodFilter, fn($q) => $q->where('payment_method', $methodFilter))
             ->select([
                 'payment_method',
@@ -361,13 +362,21 @@ class ReportController extends Controller
             'orders' => $rows->pluck('orders_count'),
         ];
 
+        // Summary totals (completed only)
+        $summary = [
+            'orders_count' => (int) $rows->sum('orders_count'),
+            'revenue' => (int) $rows->sum('revenue'),
+            'aov' => ($rows->sum('orders_count') > 0) ? round($rows->sum('revenue') / $rows->sum('orders_count')) : 0,
+            'methods' => (int) $rows->count(),
+        ];
+
         $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
         $users = $isAdmin
             ? User::orderBy('name')->get(['id','name'])
             : User::where('id', $userId)->get(['id','name']);
 
-        return view('pages.report.payments', compact('rows','chart','date_from','date_to','paymentMethods','statuses','userId','users','status','methodFilter'));
+        return view('pages.report.payments', compact('rows','chart','summary','date_from','date_to','paymentMethods','statuses','userId','users','status','methodFilter'));
     }
 
     // New: Time Analysis (by hour / day-of-week)

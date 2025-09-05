@@ -42,12 +42,8 @@
             <div class="col-md-3">
               <div class="form-group">
                 <label>Status</label>
-                <select name="status" class="form-control">
-                  <option value="">Semua</option>
-                  @foreach($statuses as $s)
-                    <option value="{{ $s }}" {{ ($status ?? '') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-                  @endforeach
-                </select>
+                <input type="text" class="form-control" value="Completed" disabled>
+                <input type="hidden" name="status" value="completed">
               </div>
             </div>
             <div class="col-md-3">
@@ -85,11 +81,51 @@
         <h4>Periode: {{ $date_from }} s/d {{ $date_to }}</h4>
       </div>
       <div class="card-body">
+        {{-- Summary (Completed only) --}}
+        <div class="row mb-4">
+          <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card card-statistic-1">
+              <div class="card-icon bg-primary"><i class="fas fa-receipt"></i></div>
+              <div class="card-wrap">
+                <div class="card-header"><h4>Total Orders</h4></div>
+                <div class="card-body">{{ number_format($summary['orders_count'] ?? 0) }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card card-statistic-1">
+              <div class="card-icon bg-success"><i class="fas fa-money-bill-wave"></i></div>
+              <div class="card-wrap">
+                <div class="card-header"><h4>Total Revenue</h4></div>
+                <div class="card-body">{{ number_format($summary['revenue'] ?? 0) }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card card-statistic-1">
+              <div class="card-icon bg-info"><i class="fas fa-divide"></i></div>
+              <div class="card-wrap">
+                <div class="card-header"><h4>Avg Order Value</h4></div>
+                <div class="card-body">{{ number_format($summary['aov'] ?? 0) }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card card-statistic-1">
+              <div class="card-icon bg-warning"><i class="fas fa-credit-card"></i></div>
+              <div class="card-wrap">
+                <div class="card-header"><h4>Payment Methods</h4></div>
+                <div class="card-body">{{ number_format($summary['methods'] ?? 0) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="mb-3">
           @php($chips = [])
           @if(request('date_from')) @php($chips[] = 'Dari: '.request('date_from')) @endif
           @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
-          @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
+          @php($chips[] = 'Status: Completed')
           @if(request('payment_method')) @php($chips[] = 'Metode: '.request('payment_method')) @endif
           @if(request('user_id'))
               @php($u = ($users ?? collect())->firstWhere('id', request('user_id')))

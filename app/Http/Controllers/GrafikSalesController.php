@@ -25,11 +25,12 @@ class GrafikSalesController extends Controller
             default => 'month',
         };
 
-        $segmentBy = $request->input('segment_by'); // payment_method|status|null
+        $segmentBy = $request->input('segment_by'); // payment_method|status|method_status|null
+        $status = $request->input('status'); // e.g., completed
 
-        $cacheKey = 'sales_series:' . md5(json_encode([$userId, $from, $to, $bucket, $segmentBy]));
-        $series = Cache::remember($cacheKey, 300, function () use ($svc, $userId, $from, $to, $bucket, $segmentBy) {
-            return $svc->timeseries($userId, $from, $to, $bucket, $segmentBy);
+        $cacheKey = 'sales_series:' . md5(json_encode([$userId, $from, $to, $bucket, $segmentBy, $status]));
+        $series = Cache::remember($cacheKey, 300, function () use ($svc, $userId, $from, $to, $bucket, $segmentBy, $status) {
+            return $svc->timeseries($userId, $from, $to, $bucket, $segmentBy, $status);
         });
 
         return response()->json($series);
