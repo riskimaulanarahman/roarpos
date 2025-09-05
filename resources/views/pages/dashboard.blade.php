@@ -274,97 +274,7 @@
                                 <h4>Grafik Sales</h4>
                             </div>
                             <div class="card-body">
-                                <form action="{{ route('dashboard_grafik.filter') }}" method="GET" id="salesFilterForm">
-                                    <div class="row">
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label>Periode</label>
-                                                <select name="period" id="periodSelectDash" class="form-control">
-                                                    <option value="harian">Harian</option>
-                                                    <option value="mingguan">Mingguan</option>
-                                                    <option value="bulanan" selected>Bulanan</option>
-                                                    <option value="tahunan">Tahunan</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3" id="yearColDash">
-                                            <div class="form-group">
-                                                <label>Pilih Tahun</label>
-                                                <select name="year" class="form-control">
-                                                    @foreach (range(date('Y'), 2000) as $y)
-                                                        <option value="{{ $y }}" {{ $y == request()->query('year', date('Y')) ? 'selected' : '' }}>
-                                                            {{ $y }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            @error('year')
-                                                <div class="alert alert-danger">
-                                                    {{ $message }}
-                                                </div>
-                                            @enderror
-                                        </div>
-                                        <div class="col-md-3" id="monthColDash">
-                                            <div class="form-group">
-                                                <label>Pilih Bulan</label>
-                                                <select name="month" class="form-control">
-                                                    @foreach (range(1, 12) as $m)
-                                                        <option value="{{ $m }}" {{ $m == request()->query('month', date('m')) ? 'selected' : '' }}>
-                                                            {{ date('F', mktime(0, 0, 0, $m, 10)) }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            @error('month')
-                                                <div class="alert alert-danger">
-                                                    {{ $message }}
-                                                </div>
-                                            @enderror
-                                        </div>
-                                        <div class="col-md-3" id="weekColDash" style="display:none;">
-                                            <div class="form-group">
-                                                <label>Opsi Mingguan</label>
-                                                <select id="weekOptionSelectDash" class="form-control">
-                                                    <option value="">Pilih...</option>
-                                                    <optgroup label="Minggu di Bulan">
-                                                        <option value="w1">Minggu ke-1</option>
-                                                        <option value="w2">Minggu ke-2</option>
-                                                        <option value="w3">Minggu ke-3</option>
-                                                        <option value="w4">Minggu ke-4</option>
-                                                        <option value="w5">Minggu ke-5</option>
-                                                    </optgroup>
-                                                    <optgroup label="Hari Terakhir">
-                                                        <option value="last_7">7 hari terakhir</option>
-                                                        <option value="last_14">14 hari terakhir</option>
-                                                        <option value="last_21">21 hari terakhir</option>
-                                                        <option value="last_28">28 hari terakhir</option>
-                                                    </optgroup>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label>Segment by</label>
-                                                <select id="segmentBySelectDash" class="form-control">
-                                                    <option value="">None</option>
-                                                    <option value="payment_method">Payment Method</option>
-                                                    <option value="status">Status</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-3">
-                                            <div class="form-group d-flex">
-                                                <button type="submit" class="btn btn-primary btn-lg mr-2" tabindex="4">Filter</button>
-                                                <button type="button" id="btnExportSeriesCsv" class="btn btn-outline-primary btn-lg">Export CSV</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </form>
-
-                                <div class="card mt-4">
+                                <div class="card">
                                     <div class="card-body">
                                         <canvas id="grafikSalesChart"></canvas>
                                     </div>
@@ -497,32 +407,7 @@
             });
         }
 
-        function updateVisibilityDash(){
-            const period = document.getElementById('periodSelectDash')?.value || 'bulanan';
-            const monthCol = document.getElementById('monthColDash');
-            const yearCol = document.getElementById('yearColDash');
-            const weekCol = document.getElementById('weekColDash');
-            if(yearCol) yearCol.style.display = 'block';
-            if(monthCol) monthCol.style.display = (period==='tahunan') ? 'none' : 'block';
-            if(weekCol) weekCol.style.display = (period==='mingguan') ? 'block' : 'none';
-        }
-
-        function gatherChartParams(){
-            const form = document.getElementById('salesFilterForm');
-            const period = document.getElementById('periodSelectDash')?.value || 'bulanan';
-            const year = form.querySelector('select[name="year"]').value;
-            const month = form.querySelector('select[name="month"]').value;
-            const weekOpt = document.getElementById('weekOptionSelectDash')?.value || '';
-            const segmentBy = document.getElementById('segmentBySelectDash')?.value || '';
-            const params = { period, year };
-            if (period !== 'tahunan') params.month = month;
-            if (period === 'mingguan') {
-                if (weekOpt.startsWith('w')) params.week_in_month = weekOpt;
-                if (weekOpt.startsWith('last_')) params.last_days = weekOpt.split('_')[1];
-            }
-            if (segmentBy) params.segment_by = segmentBy;
-            return params;
-        }
+        // No filters on dashboard: fixed params handled below
 
         document.addEventListener('DOMContentLoaded', async function () {
             // Hook order detail links
@@ -532,21 +417,15 @@
                 });
             });
 
-            updateVisibilityDash();
-            const initialParams = gatherChartParams();
-            try { await renderSalesChart(initialParams); } catch(e) { console.error(e); }
-
-            // Intercept filter submit to fetch without reload
-            const form = document.getElementById('salesFilterForm');
-            form?.addEventListener('submit', async function(e){ e.preventDefault();
-                try { await renderSalesChart(gatherChartParams()); } catch(err) { alert('Gagal memuat grafik'); }
-            });
-            document.getElementById('periodSelectDash')?.addEventListener('change', function(){ updateVisibilityDash(); });
-            document.getElementById('btnExportSeriesCsv')?.addEventListener('click', function(){
-                const params = gatherChartParams();
-                const qs = new URLSearchParams(params).toString();
-                window.location = `{{ route('dashboard.sales_series_csv') }}?${qs}`;
-            });
+            // Render daily revenue in current month grouped by payment method + status
+            const now = new Date();
+            const params = {
+                period: 'harian',
+                year: now.getFullYear(),
+                month: now.getMonth() + 1,
+                segment_by: 'method_status'
+            };
+            try { await renderSalesChart(params); } catch(e) { console.error(e); }
         });
     </script>
 @endpush

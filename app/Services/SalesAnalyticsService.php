@@ -20,13 +20,22 @@ class SalesAnalyticsService
     {
         [$selectExpr, $groupExpr, $labelFormatter] = $this->bucketExpr($bucket);
 
+        // Build segment select supporting combined method+status when requested
+        $segmentSelect = "'All'";
+        if ($segmentBy === 'method_status') {
+            $segmentSelect = "CONCAT(COALESCE(payment_method,'Unknown'),' - ',COALESCE(status,'Unknown'))";
+        } elseif (!empty($segmentBy)) {
+            // safe because only specific allowed values are used by controllers/views
+            $segmentSelect = $segmentBy;
+        }
+
         $base = DB::table('orders')
             ->selectRaw("$selectExpr as bucket")
-            ->selectRaw($segmentBy ? "$segmentBy as segment" : "'All' as segment")
+            ->selectRaw("$segmentSelect as segment")
             ->selectRaw('SUM(total_price) as revenue')
             ->where('user_id', $userId)
             ->whereBetween(DB::raw('DATE(created_at)'), [$from, $to])
-            ->groupByRaw($segmentBy ? "$groupExpr, $segmentBy" : $groupExpr)
+            ->groupByRaw($segmentBy ? ($segmentBy === 'method_status' ? "$groupExpr, payment_method, status" : "$groupExpr, $segmentBy") : $groupExpr)
             ->orderBy('bucket');
 
         $rows = $base->get();
