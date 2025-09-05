@@ -39,12 +39,8 @@ class OrderController extends Controller
             ]);
         }
 
-        // \Log::info([
-        //     'raw_created_at' => $order->getRawOriginal('created_at'),
-        //     'eloquent_created_at' => (string) $order->created_at,
-        //     'timezone_app' => config('app.timezone'),
-        //     'php_timezone' => date_default_timezone_get(),
-        // ]);
+        // Setelah order berhasil dibuat (asumsi langsung paid/completed), trigger konsumsi bahan
+        event(new \App\Events\OrderPaid($order->id));
 
         return response()->json([
             'message' => 'Order created successfully',
@@ -143,6 +139,9 @@ class OrderController extends Controller
                     'total_price' => \App\Models\Product::find($item['product_id'])->price * $item['quantity'],
                 ]);
             }
+
+            // Trigger konsumsi bahan untuk setiap order yang dianggap selesai
+            event(new \App\Events\OrderPaid($order->id));
 
             $createdOrders[] = $order->load('orderItems.product');
         }

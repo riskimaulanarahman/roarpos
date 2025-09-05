@@ -17,11 +17,15 @@ class ReportController extends Controller
 {
     public function index()
     {
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
+        $currentUserId = auth()->id();
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $categories = Category::where('user_id', $currentUserId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $currentUserId)->orderBy('name')->get(['id','name']);
+        $paymentMethods = Order::where('user_id', $currentUserId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
-        $users = User::orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $currentUserId)->get(['id','name']);
         return view('pages.report.index', compact('categories','products','paymentMethods','statuses','users'));
     }
 
@@ -30,9 +34,10 @@ class ReportController extends Controller
         // Compute date range based on new period filters. Fallback to old validation if needed.
         $resolved = ReportDateRange::fromRequest($request);
         if (!$resolved['from'] || !$resolved['to']) {
-            $this->validate($request, [
-                'date_from'  => 'required|date',
-                'date_to'    => 'required|date|after_or_equal:date_from',
+            // Default last 30 days if not provided
+            $request->merge([
+                'date_from' => now()->copy()->subDays(29)->toDateString(),
+                'date_to' => now()->toDateString(),
             ]);
         }
 
@@ -42,7 +47,8 @@ class ReportController extends Controller
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
-        $userId = $request->input('user_id') ?: (auth()->id());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
         $year = $request->input('year');
         $month = $request->input('month');
         $weekInMonth = $request->input('week_in_month');
@@ -73,11 +79,11 @@ class ReportController extends Controller
                 });
             });
 
-        // All rows for DataTables client-side pagination
+        // Paginated rows for better performance on large datasets
         $orders = (clone $baseQuery)
             ->with('user')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($request->integer('page_size', 50));
 
         // Summary metrics
         $ordersCount = (clone $baseQuery)->count();
@@ -150,11 +156,13 @@ class ReportController extends Controller
             'orders' => $timeseriesRows->pluck('orders_count'),
         ];
 
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
+        $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
-        $users = User::orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
 
         return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','period','year','month','weekInMonth','lastDays','userId','users'));
     }
@@ -167,13 +175,14 @@ class ReportController extends Controller
         ]);
 
         $resolved = ReportDateRange::fromRequest($request);
-        $date_from = $resolved['from'] ?? $request->date_from;
-        $date_to = $resolved['to'] ?? $request->date_to;
+        $date_from = $resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString());
+        $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
         $status = $request->input('status');
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
-        $userId = $request->input('user_id') ?: (auth()->id());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
         $year = $request->input('year');
         $month = $request->input('month');
         $weekInMonth = $request->input('week_in_month');
@@ -209,11 +218,13 @@ class ReportController extends Controller
             ];
         }
 
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
+        $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
-        $users = User::orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
 
         return view('pages.report.by_category', compact('categorySales', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','year','month','weekInMonth','lastDays','userId','users'));
     }
@@ -226,13 +237,14 @@ class ReportController extends Controller
         ]);
 
         $resolved = ReportDateRange::fromRequest($request);
-        $date_from = $resolved['from'] ?? $request->date_from;
-        $date_to = $resolved['to'] ?? $request->date_to;
+        $date_from = $resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString());
+        $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
         $status = $request->input('status');
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
-        $userId = $request->input('user_id') ?: (auth()->id());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
 
         $items = collect();
         $chart = null;
@@ -254,7 +266,9 @@ class ReportController extends Controller
                 ->when($productId, fn($q) => $q->where('order_items.product_id', $productId))
                 ->select('order_items.*');
 
-            $items = (clone $base)->orderBy('order_items.created_at', 'desc')->get();
+            $items = (clone $base)
+                ->orderBy('order_items.created_at', 'desc')
+                ->paginate($request->integer('page_size', 50));
 
             $period = $request->input('period');
             $selectExpr = DB::raw('DATE(orders.created_at) as bucket');
@@ -296,13 +310,173 @@ class ReportController extends Controller
             ];
         }
 
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
+        $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
-        $users = User::orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
 
         return view('pages.report.detail', compact('items', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId', 'period','year','month','weekInMonth','lastDays','userId','users'));
+    }
+
+    // New: Payment Methods report
+    public function payments(Request $request)
+    {
+        $this->validate($request, [
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+        ]);
+
+        $resolved = ReportDateRange::fromRequest($request);
+        $date_from = $resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString());
+        $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
+        $status = $request->input('status');
+        $methodFilter = $request->input('payment_method');
+
+        $rows = Order::query()
+            ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
+            ->when($userId, fn($q) => $q->where('user_id', $userId))
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($methodFilter, fn($q) => $q->where('payment_method', $methodFilter))
+            ->select([
+                'payment_method',
+                DB::raw('SUM(total_price) as revenue'),
+                DB::raw('COUNT(*) as orders_count')
+            ])
+            ->groupBy('payment_method')
+            ->orderByDesc('revenue')
+            ->get()
+            ->map(function ($r) {
+                $r->aov = $r->orders_count ? round($r->revenue / $r->orders_count) : 0;
+                return $r;
+            });
+
+        $chart = [
+            'labels' => $rows->pluck('payment_method')->map(fn($m) => $m ?: 'unknown'),
+            'revenue' => $rows->pluck('revenue'),
+            'orders' => $rows->pluck('orders_count'),
+        ];
+
+        $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
+        $statuses = ['completed', 'refund', 'pending'];
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
+
+        return view('pages.report.payments', compact('rows','chart','date_from','date_to','paymentMethods','statuses','userId','users','status','methodFilter'));
+    }
+
+    // New: Time Analysis (by hour / day-of-week)
+    public function timeAnalysis(Request $request)
+    {
+        $this->validate($request, [
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'mode' => 'nullable|in:hour,dow'
+        ]);
+
+        $resolved = ReportDateRange::fromRequest($request);
+        $date_from = $resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString());
+        $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
+        $status = $request->input('status');
+        $mode = $request->input('mode', 'hour');
+
+        if ($mode === 'dow') {
+            $rows = Order::query()
+                ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
+                ->when($userId, fn($q) => $q->where('user_id', $userId))
+                ->when($status, fn($q) => $q->where('status', $status))
+                ->select([
+                    DB::raw('DAYOFWEEK(created_at) as bucket'),
+                    DB::raw('SUM(total_price) as revenue'),
+                    DB::raw('COUNT(*) as orders_count')
+                ])
+                ->groupBy(DB::raw('DAYOFWEEK(created_at)'))
+                ->orderBy(DB::raw('DAYOFWEEK(created_at)'))
+                ->get();
+            $labels = $rows->pluck('bucket')->map(function ($d) {
+                // 1=Sun..7=Sat
+                $names = [1=>'Sun',2=>'Mon',3=>'Tue',4=>'Wed',5=>'Thu',6=>'Fri',7=>'Sat'];
+                return $names[(int)$d] ?? (string)$d;
+            });
+        } else {
+            $rows = Order::query()
+                ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
+                ->when($userId, fn($q) => $q->where('user_id', $userId))
+                ->when($status, fn($q) => $q->where('status', $status))
+                ->select([
+                    DB::raw("DATE_FORMAT(created_at, '%H') as bucket"),
+                    DB::raw('SUM(total_price) as revenue'),
+                    DB::raw('COUNT(*) as orders_count')
+                ])
+                ->groupBy(DB::raw("DATE_FORMAT(created_at, '%H')"))
+                ->orderBy(DB::raw("DATE_FORMAT(created_at, '%H')"))
+                ->get();
+            $labels = $rows->pluck('bucket')->map(fn($h) => str_pad($h, 2, '0', STR_PAD_LEFT).':00');
+        }
+
+        $chart = [
+            'labels' => $labels,
+            'revenue' => $rows->pluck('revenue'),
+            'orders' => $rows->pluck('orders_count'),
+            'mode' => $mode,
+        ];
+
+        $statuses = ['completed', 'refund', 'pending'];
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
+
+        return view('pages.report.time', compact('rows','chart','date_from','date_to','statuses','userId','users','status','mode'));
+    }
+
+    // New: Refunds report
+    public function refunds(Request $request)
+    {
+        $this->validate($request, [
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+        ]);
+
+        $resolved = ReportDateRange::fromRequest($request);
+        $date_from = $resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString());
+        $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
+
+        $baseAll = Order::query()
+            ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
+            ->when($userId, fn($q) => $q->where('user_id', $userId));
+
+        $refunds = (clone $baseAll)
+            ->where('status', 'refund')
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->integer('page_size', 50));
+
+        $refundCount = (clone $baseAll)->where('status','refund')->count();
+        $refundAmount = (clone $baseAll)->where('status','refund')->sum('refund_nominal');
+        $totalOrders = (clone $baseAll)->count();
+        $refundRate = $totalOrders ? round(($refundCount / $totalOrders) * 100, 2) : 0;
+
+        $summary = [
+            'refund_count' => $refundCount,
+            'refund_amount' => $refundAmount,
+            'refund_rate_pct' => $refundRate,
+            'total_orders' => $totalOrders,
+        ];
+
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
+
+        return view('pages.report.refunds', compact('refunds','summary','date_from','date_to','userId','users'));
     }
 
     public function download(Request $request)
@@ -321,7 +495,50 @@ class ReportController extends Controller
 
         return (new OrdersExport)
             ->forRange($date_from, $date_to)
+            ->withUser(auth()->id())
             ->withFilters($status, $payment, $categoryId, $productId)
             ->download('report-orders.csv');
+    }
+
+    public function downloadByCategory(Request $request)
+    {
+        $this->validate($request, [
+            'date_from'  => 'required|date',
+            'date_to'    => 'required|date|after_or_equal:date_from',
+        ]);
+        $date_from = $request->date_from;
+        $date_to = $request->date_to;
+        $status = $request->input('status');
+        $payment = $request->input('payment_method');
+        $categoryId = $request->input('category_id');
+        $productId = $request->input('product_id');
+        $userId = $request->input('user_id') ?: auth()->id();
+
+        return (new \App\Exports\CategorySalesExport)
+            ->forRange($date_from, $date_to)
+            ->withUser($userId)
+            ->withFilters($status, $payment, $categoryId, $productId)
+            ->download('report-category.csv');
+    }
+
+    public function downloadDetail(Request $request)
+    {
+        $this->validate($request, [
+            'date_from'  => 'required|date',
+            'date_to'    => 'required|date|after_or_equal:date_from',
+        ]);
+        $date_from = $request->date_from;
+        $date_to = $request->date_to;
+        $status = $request->input('status');
+        $payment = $request->input('payment_method');
+        $categoryId = $request->input('category_id');
+        $productId = $request->input('product_id');
+        $userId = $request->input('user_id') ?: auth()->id();
+
+        return (new \App\Exports\OrderItemsExport)
+            ->forRange($date_from, $date_to)
+            ->withUser($userId)
+            ->withFilters($status, $payment, $categoryId, $productId)
+            ->download('report-detail.csv');
     }
 }

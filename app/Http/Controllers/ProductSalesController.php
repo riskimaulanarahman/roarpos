@@ -16,9 +16,13 @@ class ProductSalesController extends Controller
 
     public function index()
     {
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $users = User::orderBy('name')->get(['id','name']);
+        $currentUserId = auth()->id();
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $categories = Category::where('user_id', $currentUserId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $currentUserId)->orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $currentUserId)->get(['id','name']);
         return view('pages.product_sales.index', compact('categories','products','users'));
     }
 
@@ -37,7 +41,8 @@ class ProductSalesController extends Controller
         $date_to    = $resolved['to'] ?? $request->date_to;
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
-        $userId = $request->input('user_id') ?: (auth()->id());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
         $year = $request->input('year');
         $month = $request->input('month');
         $weekInMonth = $request->input('week_in_month');
@@ -66,9 +71,11 @@ class ProductSalesController extends Controller
             'revenue' => $totalProductSold->pluck('total_price'),
         ];
 
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $users = User::orderBy('name')->get(['id','name']);
+        $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
 
         return view('pages.product_sales.index', compact('totalProductSold', 'chart', 'date_from', 'date_to','categories','products','categoryId','productId','year','month','weekInMonth','lastDays','userId','users'));
     }
@@ -84,6 +91,9 @@ class ProductSalesController extends Controller
         $date_to    = $request->date_to;
 
 
-        return (new ProductSalesExport)->forRange($date_from, $date_to)->download('Product-Sales.csv');
+        return (new ProductSalesExport)
+            ->forRange($date_from, $date_to)
+            ->withUser(auth()->id())
+            ->download('Product-Sales.csv');
     }
 }

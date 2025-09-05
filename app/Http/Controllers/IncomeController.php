@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Income;
+use App\Models\IncomeCategory;
 use Illuminate\Http\Request;
 
 class IncomeController extends Controller
@@ -12,62 +13,58 @@ class IncomeController extends Controller
      */
     public function index(Request $request)
     {
-        $incomes = Income::when($request->type, function ($query, $type) {
-            return $query->where('payment_type', $type);
-        })->orderByDesc('date')->paginate(10);
+        $q = Income::with('category')->orderByDesc('date');
+        if ($request->filled('date_from')) {
+            $q->whereDate('date', '>=', $request->input('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $q->whereDate('date', '<=', $request->input('date_to'));
+        }
+        if ($request->filled('category_id')) {
+            $q->where('category_id', $request->integer('category_id'));
+        }
+        $incomes = $q->paginate(10);
+        $categories = IncomeCategory::orderBy('name')->get();
 
-        return view('pages.income.index', compact('incomes'));
+        return view('pages.income.index', compact('incomes','categories'));
     }
 
     public function create()
     {
-        return view('pages.income.create');
+        $categories = IncomeCategory::orderBy('name')->get();
+        return view('pages.income.create', compact('categories'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'date' => 'required|date',
-            'desc' => 'required',
-            'qty' => 'required|integer|min:1',
-            'price_per_unit' => 'required|numeric|min:0',
-            'payment_type' => 'required|in:cash,transfer',
+        $data = $request->validate([
+            'date' => ['required','date'],
+            'amount' => ['required','numeric','min:0.01'],
+            'category_id' => ['nullable','exists:income_categories,id'],
+            'notes' => ['nullable','string']
         ]);
-
-        Income::create([
-            'date' => $request->date,
-            'desc' => $request->desc,
-            'qty' => $request->qty,
-            'price_per_unit' => $request->price_per_unit,
-            'total' => $request->qty * $request->price_per_unit,
-            'payment_type' => $request->payment_type,
-        ]);
+        $data['reference_no'] = 'INC-'.now()->format('Ymd').'-'.str_pad((string)(Income::whereDate('date', $data['date'])->count()+1), 4, '0', STR_PAD_LEFT);
+        Income::create($data);
 
         return redirect()->route('income.index')->with('success', 'Data berhasil ditambahkan!');
     }
 
     public function edit(Income $income)
     {
-        return view('pages.income.edit', compact('income'));
+        $categories = IncomeCategory::orderBy('name')->get();
+        return view('pages.income.edit', compact('income','categories'));
     }
 
     public function update(Request $request, Income $income)
     {
-        $request->validate([
-            'date' => 'required|date',
-            'qty' => 'required|integer|min:1',
-            'price_per_unit' => 'required|numeric|min:0',
-            'payment_type' => 'required|in:cash,transfer',
+        $data = $request->validate([
+            'date' => ['required','date'],
+            'amount' => ['required','numeric','min:0.01'],
+            'category_id' => ['nullable','exists:income_categories,id'],
+            'notes' => ['nullable','string']
         ]);
 
-        $income->update([
-            'date' => $request->date,
-            'desc' => $request->desc,
-            'qty' => $request->qty,
-            'price_per_unit' => $request->price_per_unit,
-            'total' => $request->qty * $request->price_per_unit,
-            'payment_type' => $request->payment_type,
-        ]);
+        $income->update($data);
 
         return redirect()->route('income.index')->with('success', 'Data berhasil diperbarui!');
     }

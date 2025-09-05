@@ -77,7 +77,7 @@
     <div class="toga-login">
         <div class="toga-left">
             <h3 class="toga-title">Sign in to TOGA POS</h3>
-            <p class="toga-subtitle">Welcome back. Please enter your details.</p>
+<p class="toga-subtitle">Welcome back. Please enter your details.</p>
 
             <form method="POST" action="{{ route('login') }}" class="js-disable-on-submit" novalidate>
                 @csrf

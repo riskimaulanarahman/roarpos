@@ -19,6 +19,7 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
     protected $paymentMethod;
     protected $categoryId;
     protected $productId;
+    protected $userId;
 
     public function forRange(string $start, string $end)
     {
@@ -36,11 +37,18 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
         return $this;
     }
 
+    public function withUser(?int $userId)
+    {
+        $this->userId = $userId;
+        return $this;
+    }
+
     public function query()
     {
         return Order::query()
             ->with('user')
             ->whereBetween('created_at', [$this->start, $this->end])
+            ->when($this->userId, fn($q) => $q->where('user_id', $this->userId))
             ->when($this->status, fn($q) => $q->where('status', $this->status))
             ->when($this->paymentMethod, fn($q) => $q->where('payment_method', $this->paymentMethod))
             ->when($this->categoryId, function ($q) {
@@ -66,14 +74,8 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
 
     public function map($order): array
     {
-        static $i = 1;
         return [
-            $i++,
             $order->transaction_time,
-            $order->sub_total,
-            $order->discount_amount,
-            $order->tax,
-            $order->service_charge,
             $order->total_price,
             $order->total_item,
             optional($order->user)->name ?? ($order->cashier_name ?? '-')
@@ -83,12 +85,7 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
     public function headings(): array
     {
         return [
-            'No',
-            'Tanggal Transaksi',
-            'Sub Total',
-            'Discount',
-            'Tax',
-            'Service Charge',
+            'Transaction Time',
             'Total Price',
             'Total Item',
             'Kasir',

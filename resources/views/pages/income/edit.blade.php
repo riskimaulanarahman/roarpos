@@ -21,23 +21,21 @@
                                     <input type="date" name="date" value="{{ $income->date }}" class="form-control" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Description</label>
-                                    <input type="text" name="desc" value="{{ $income->desc }}" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Qty</label>
-                                    <input type="number" name="qty" value="{{ $income->qty }}" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Harga Per Unit</label>
-                                    <input type="number" name="price_per_unit" value="{{ $income->price_per_unit }}" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Tipe Pembayaran</label>
-                                    <select name="payment_type" class="form-control">
-                                        <option value="cash" {{ $income->payment_type == 'cash' ? 'selected' : '' }}>Cash</option>
-                                        <option value="transfer" {{ $income->payment_type == 'transfer' ? 'selected' : '' }}>Transfer</option>
+                                    <label>Kategori</label>
+                                    <select name="category_id" class="form-control">
+                                        <option value="">-</option>
+                                        @foreach($categories as $cat)
+                                            <option value="{{ $cat->id }}" {{ $income->category_id==$cat->id?'selected':'' }}>{{ $cat->name }}</option>
+                                        @endforeach
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Jumlah</label>
+                                    <input type="number" step="0.01" name="amount" value="{{ $income->amount }}" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Catatan</label>
+                                    <textarea name="notes" class="form-control">{{ $income->notes }}</textarea>
                                 </div>
                             </div>
                             <div class="card-footer text-right">

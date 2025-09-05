@@ -25,19 +25,8 @@
                     </a>
                 </li>
 
-                <li class="{{ Request::is('discount*') ? 'active' : '' }}">
-                    <a class="nav-link" href="{{ route('discount.index') }}">
-                        <i class="fas fa-gift"></i> <span>Discounts</span>
-                    </a>
-                </li>
 
-                <li class="{{ Request::is('additional_charge*') ? 'active' : '' }}">
-                    <a class="nav-link" href="{{ route('additional_charge.index') }}">
-                        <i class="fas fa-file-invoice-dollar"></i> <span>Additional Charges</span>
-                    </a>
-                </li>
-
-                <li class="nav-item dropdown {{ Request::is('income*') ? 'active' : '' }}">
+                <li class="nav-item dropdown {{ (Request::is('income*') || Request::is('expenses*')) ? 'active' : '' }}">
                     <a href="#" class="nav-link has-dropdown">
                         <i class="fas fa-dollar"></i><span>Finance</span>
                     </a>
@@ -47,8 +36,30 @@
                                 <i class="fas fa-arrow-down"></i> <span>Uang Masuk</span>
                             </a>
                         </li>
-                        {{-- Tambahkan item finance lain di sini bila diperlukan --}}
+                        <li class="{{ Request::is('expenses*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('expenses.index') }}">
+                                <i class="fas fa-arrow-up"></i> <span>Uang Keluar</span>
+                            </a>
+                        </li>
                     </ul>
+                </li>
+
+                {{-- Inventory module removed --}}
+
+                <li class="{{ (Request::is('product') || Request::is('product/*')) ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('product.index') }}">
+                        <i class="fas fa-list"></i> <span>Products</span>
+                    </a>
+                </li>
+
+                {{-- Employees module removed --}}
+
+                {{-- Attendance module removed --}}
+
+                <li class="{{ Request::is('api/docs') ? 'active' : '' }}">
+                    <a class="nav-link" href="/api/docs" target="_blank">
+                        <i class="fas fa-book"></i> <span>API Docs</span>
+                    </a>
                 </li>
             @endif
             {{-- ====== END ADMIN ONLY ====== --}}
@@ -103,6 +114,21 @@
                         <li class="{{ Request::is('product_sales*') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('product_sales.index') }}">
                                 <i class="fas fa-bar-chart"></i> <span>Product Sales</span>
+                            </a>
+                        </li>
+                        <li class="{{ Request::is('report/payments') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('report.payments') }}">
+                                <i class="fas fa-credit-card"></i> <span>Payments</span>
+                            </a>
+                        </li>
+                        <li class="{{ Request::is('report/time') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('report.time') }}">
+                                <i class="fas fa-clock"></i> <span>Time Analysis</span>
+                            </a>
+                        </li>
+                        <li class="{{ Request::is('report/refunds') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('report.refunds') }}">
+                                <i class="fas fa-undo"></i> <span>Refunds</span>
                             </a>
                         </li>
                     </ul>

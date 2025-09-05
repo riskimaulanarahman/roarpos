@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -21,6 +21,20 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Map existing user roles (admin/staff/user) to requested permissions
+        Gate::define('finance.view', function ($user) {
+            return in_array($user->roles, ['admin','staff','user']);
+        });
+        Gate::define('finance.manage', function ($user) {
+            return in_array($user->roles, ['admin']); // treat admin as owner/manager
+        });
+
+        Gate::define('inventory.manage', function ($user) {
+            return in_array($user->roles, ['admin']);
+        });
+
+        Gate::define('employees.manage', function ($user) {
+            return in_array($user->roles, ['admin']);
+        });
     }
 }

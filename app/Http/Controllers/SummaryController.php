@@ -15,11 +15,15 @@ class SummaryController extends Controller
 {
     public function index()
     {
-        $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
+        $currentUserId = auth()->id();
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $paymentMethods = Order::where('user_id', $currentUserId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed','refund','pending'];
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $users = User::orderBy('name')->get(['id','name']);
+        $categories = Category::where('user_id', $currentUserId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $currentUserId)->orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $currentUserId)->get(['id','name']);
         return view('pages.summary.index', compact('paymentMethods','statuses','categories','products','users'));
     }
 
@@ -40,7 +44,8 @@ class SummaryController extends Controller
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
-        $userId = $request->input('user_id') ?: (auth()->id());
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
         $period = $request->input('period');
         $year = $request->input('year');
         $month = $request->input('month');
@@ -123,11 +128,13 @@ class SummaryController extends Controller
             ],
         ];
 
-        $paymentMethods = Order::select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
+        $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed','refund','pending'];
-        $categories = Category::orderBy('name')->get(['id','name']);
-        $products = Product::orderBy('name')->get(['id','name']);
-        $users = User::orderBy('name')->get(['id','name']);
+        $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        $users = $isAdmin
+            ? User::orderBy('name')->get(['id','name'])
+            : User::where('id', $userId)->get(['id','name']);
 
         return view('pages.summary.index', compact(
             'totalRevenue', 'totalDiscount', 'totalTax', 'totalServiceCharge', 'totalSubtotal', 'total',

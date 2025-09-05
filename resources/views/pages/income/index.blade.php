@@ -3,7 +3,6 @@
 @section('title', 'Uang Masuk')
 
 @push('style')
-    <!-- CSS Libraries -->
     <link rel="stylesheet" href="{{ asset('library/selectric/public/selectric.css') }}">
 @endpush
 
@@ -21,70 +20,63 @@
                 </div>
             </div>
             <div class="section-body">
-                <div class="row">
-                    <div class="col-12">
-                        @include('layouts.alert')
-                    </div>
-                </div>
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="float-left">
-                                    <h4>Data Uang Masuk</h4>
-                                </div>
-                                <div class="float-right mt-2">
-                                    <form method="GET" action="{{ route('income.index') }}">
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" placeholder="Cari Type Pembayaran" name="type">
-                                            <div class="input-group-append">
-                                                <button class="btn btn-primary"><i class="fas fa-search"></i></button>
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-                                <div class="clearfix mb-3"></div>
-                                <div class="table-responsive">
-                                    <table class="table-striped table">
-                                        <tr>
-                                            <th>Tanggal</th>
-                                            <th>Description</th>
-                                            <th>Qty</th>
-                                            <th>Harga Per Unit</th>
-                                            <th>Total</th>
-                                            <th>Tipe Pembayaran</th>
-                                            <th>Aksi</th>
-                                        </tr>
-                                        @foreach ($incomes as $income)
-                                            <tr>
-                                                <td>{{ $income->date }}</td>
-                                                <td>{{ $income->desc }}</td>
-                                                <td>{{ $income->qty }}</td>
-                                                <td>{{ number_format($income->price_per_unit) }}</td>
-                                                <td>{{ number_format($income->total) }}</td>
-                                                <td>{{ ucfirst($income->payment_type) }}</td>
-                                                <td>
-                                                    <div class="d-flex">
-                                                        <a href="{{ route('income.edit', $income->id) }}" class="btn btn-sm btn-info btn-icon">
-                                                            <i class="fas fa-edit"></i> Edit
-                                                        </a>
-                                                        <form action="{{ route('income.destroy', $income->id) }}" method="POST" class="ml-2">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button class="btn btn-sm btn-danger btn-icon confirm-delete">
-                                                                <i class="fas fa-times"></i> Hapus
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </table>
-                                </div>
-                                <div class="float-right">
-                                    {{ $incomes->links() }}
-                                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <form method="GET" action="{{ route('income.index') }}" class="form-inline mb-3">
+                            <div class="form-group mr-2">
+                                <label class="mr-2">Mulai</label>
+                                <input type="date" name="date_from" value="{{ request('date_from') }}" class="form-control">
                             </div>
+                            <div class="form-group mr-2">
+                                <label class="mr-2">Sampai</label>
+                                <input type="date" name="date_to" value="{{ request('date_to') }}" class="form-control">
+                            </div>
+                            <div class="form-group mr-2">
+                                <select name="category_id" class="form-control selectric">
+                                    <option value="">Semua Kategori</option>
+                                    @foreach($categories as $cat)
+                                        <option value="{{ $cat->id }}" {{ request('category_id')==$cat->id?'selected':'' }}>{{ $cat->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <button class="btn btn-primary">Filter</button>
+                        </form>
+                        @include('layouts.alert')
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Tanggal</th>
+                                        <th>Ref</th>
+                                        <th>Kategori</th>
+                                        <th>Jumlah</th>
+                                        <th>Catatan</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($incomes as $income)
+                                        <tr>
+                                            <td>{{ $income->date }}</td>
+                                            <td>{{ $income->reference_no }}</td>
+                                            <td>{{ optional($income->category)->name }}</td>
+                                            <td>{{ number_format($income->amount,2) }}</td>
+                                            <td>{{ $income->notes }}</td>
+                                            <td class="text-right">
+                                                <a href="{{ route('income.edit', $income->id) }}" class="btn btn-sm btn-info">Edit</a>
+                                                <form action="{{ route('income.destroy', $income->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus data?')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="btn btn-sm btn-danger">Hapus</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="float-right">
+                            {{ $incomes->withQueryString()->links() }}
                         </div>
                     </div>
                 </div>

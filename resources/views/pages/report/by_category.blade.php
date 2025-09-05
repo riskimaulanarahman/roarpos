@@ -202,7 +202,10 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div></div>
-                            <button type="button" id="btnExportCat" class="btn btn-outline-primary">Export View (CSV)</button>
+                            <div>
+                                <a class="btn btn-primary mr-2" href="{{ route('report.byCategory.download', request()->only(['date_from','date_to','status','payment_method','category_id','product_id','user_id'])) }}">Download</a>
+                                <button type="button" id="btnExportCat" class="btn btn-outline-primary">Export View (CSV)</button>
+                            </div>
                         </div>
                         <div class="table-responsive">
                             <table id="categoryTable" class="table table-striped table-bordered text-center">

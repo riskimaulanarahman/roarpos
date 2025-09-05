@@ -64,3 +64,102 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+---
+
+# POS Enhancements
+
+This project includes additional backend modules for a POS system:
+
+- Finance: Incomes and Expenses with categories
+- Inventory: Raw Materials + Stock Movements (moving-average valuation)
+- Product Recipes: HPP (COGS) calculation and batch production (consumes materials)
+- Employees: Basic employee management (name, email, phone, pin) and roles (owner/manager/staff)
+- Attendance: Employee clock-in/out (optional geotag + photo), self history, and admin reports (JSON/CSV)
+- API for Flutter (PIN login/token, clock-in/out, history, profile)
+
+## New Migrations
+
+- incomes (updated to: date, reference_no, amount, category_id, notes, created_by, updated_by, timestamps, softDeletes)
+- income_categories, expense_categories
+- expenses (date, reference_no, amount, category_id, vendor, notes, created_by, updated_by, timestamps, softDeletes)
+- raw_materials, raw_material_movements
+- products (add: sku, sell_price, cogs_method, active)
+- product_recipes, product_recipe_items
+- employees, attendances
+
+## New Env
+
+Add to your .env:
+
+- OFFICE_LAT= -6.200000
+- OFFICE_LNG= 106.816666
+- OFFICE_RADIUS_M= 100
+- ATTENDANCE_PHOTO_REQUIRED=false
+
+## API Auth
+
+- Admin/backoffice uses Sanctum (already enabled). Roles used: users.roles where 'admin' is treated as owner/manager.
+- Attendance API uses a separate guard 'employee' (Sanctum token for Employee model).
+
+## Endpoints (highlights)
+
+- POST /api/auth/pin-login
+- Incomes: GET/POST/GET:id/PUT/DELETE /api/incomes
+- Expenses: GET/POST/GET:id/PUT/DELETE /api/expenses
+- Categories: /api/income-categories, /api/expense-categories
+- Raw Materials: /api/raw-materials, /api/raw-materials/{id}/adjust-stock, /api/raw-materials/{id}/movements
+- Recipes & HPP: /api/products/{id}/recipe (GET/POST), /api/products/{id}/produce (POST), /api/products/{id}/cogs (GET)
+- Employees: /api/employees (GET/POST/PUT/PATCH activate/deactivate)
+- Attendance (Flutter):
+  - GET /api/employees/me
+  - GET /api/attendances/me?date_from&date_to
+  - POST /api/attendances/clock-in { lat?, lng?, photo_base64? }
+  - POST /api/attendances/clock-out { lat?, lng?, photo_base64? }
+  - GET /api/reports/attendances?date_from&date_to&employee_id?&format=json|csv
+
+Rate limiting is applied on attendance endpoints.
+
+## How to use (Flutter via Dio)
+
+Example PIN login:
+
+```
+json path=null start=null
+POST /api/auth/pin-login
+{
+  "phone_or_email": "staff@example.com",
+  "pin": "1234"
+}
+```
+
+Use returned token as Bearer for subsequent attendance requests.
+
+## Swagger UI
+
+Open http://your-app.test/api/docs (non-production) or (production: restricted to admin). The UI reads public/openapi.yaml.
+
+## Storage
+
+Attendance photos are stored under storage/app/public/attendances and served via /storage after linking:
+
+```
+bash path=null start=null
+php artisan storage:link
+```
+
+## Tests
+
+Run tests:
+
+```
+bash path=null start=null
+php artisan test
+```
+
+Includes feature tests for PIN login, attendance flow, and recipe/inventory (moving average + HPP).
+
+## Notes
+
+- COGS is calculated using moving average of raw materials with waste percentage: HPP = Σ( qty_per_yield * (1 + waste_pct/100) * average_unit_cost ) / yield_qty.
+- Hooks into order consumption are optional; current implementation exposes a ProductionCompleted event. To consume on sales, dispatch an event after order is paid and subscribe a listener that calls RecipeService->produce based on quantities.

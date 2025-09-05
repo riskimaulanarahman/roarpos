@@ -31,14 +31,24 @@ return [
     | users are actually retrieved out of your database or other storage
     | mechanisms used by this application to persist your user's data.
     |
-    | Supported: "session"
+    | Supported: "session", "sanctum"
     |
     */
 
-    'guards' => [
+'guards' => [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+        // Default API guard using Sanctum for User model
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+        // Employee token guard for APIs (absensi)
+        'employee' => [
+            'driver' => 'sanctum',
+            'provider' => 'employees',
         ],
     ],
 
@@ -63,6 +73,10 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
+        ],
+        'employees' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Employee::class,
         ],
 
         // 'users' => [

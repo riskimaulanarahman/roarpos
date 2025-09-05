@@ -15,11 +15,18 @@ class ProductSalesExport implements FromQuery, WithMapping, WithHeadings{
     use Exportable;
     protected $start;
     protected $end;
+    protected $userId;
 
     public function forRange(String $start, String $end)
     {
         $this->start = $start;
         $this->end = $end;
+        return $this;
+    }
+
+    public function withUser(?int $userId)
+    {
+        $this->userId = $userId;
         return $this;
     }
 
@@ -31,7 +38,9 @@ class ProductSalesExport implements FromQuery, WithMapping, WithHeadings{
             DB::raw('SUM(order_items.total_price) as total_price')
         )
             ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->whereBetween(DB::raw('DATE(order_items.created_at)'), [$this->start, $this->end])
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->whereBetween(DB::raw('DATE(orders.created_at)'), [$this->start, $this->end])
+            ->when($this->userId, fn($q) => $q->where('orders.user_id', $this->userId))
             ->groupBy('products.name')
             ->orderBy('total_quantity', 'desc');
         return $query;

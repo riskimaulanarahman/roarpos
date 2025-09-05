@@ -41,6 +41,9 @@ Route::post('login', [\App\Http\Controllers\Api\AuthController::class, 'login'])
 // post logout
 Route::post('logout', [\App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
 
+// Employee PIN login removed (attendance module disabled)
+// Route::post('/auth/pin-login', [\App\Http\Controllers\Api\EmployeeAuthController::class, 'pinLogin'])->middleware('throttle:attendance');
+
 // api resource product
 // Route::apiResource('products', \App\Http\Controllers\Api\ProductController::class)->middleware('auth:sanctum');
 Route::get('/products', [App\Http\Controllers\Api\ProductController::class, 'index'])->middleware('auth:sanctum');
@@ -50,6 +53,8 @@ Route::post('/products', [App\Http\Controllers\Api\ProductController::class, 'st
 Route::post('/products/edit', [App\Http\Controllers\Api\ProductController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('/products/{id}', [App\Http\Controllers\Api\ProductController::class, 'destroy'])->middleware('auth:sanctum');
 
+// Product recipe & production endpoints removed (inventory/production module disabled)
+
 // api resource order
 
 Route::post('/orders', [App\Http\Controllers\Api\OrderController::class, 'store'])->middleware('auth:sanctum');
@@ -58,31 +63,38 @@ Route::get('/orders/date', [App\Http\Controllers\Api\OrderController::class, 'in
 Route::get('/orders', [App\Http\Controllers\Api\OrderController::class, 'getAllOrder'])->middleware('auth:sanctum');
 Route::post('orders/{id}/refund', [App\Http\Controllers\Api\OrderController::class, 'refund'])->middleware('auth:sanctum');
 
-// api resource discount
-Route::apiResource('discounts', \App\Http\Controllers\Api\DiscountController::class)->middleware('auth:sanctum');
-Route::get('/discounts/status/{status}', [App\Http\Controllers\Api\DiscountController::class, 'discountByStatus'])->middleware('auth:sanctum');
-// api resource category
-// Route::apiResource('categories', \App\Http\Controllers\Api\CategoryController::class)->middleware('auth:sanctum');
-Route::get('/categories', [App\Http\Controllers\Api\CategoryController::class, 'index'])->middleware('auth:sanctum');
-Route::get('/categories/{id}', [App\Http\Controllers\Api\CategoryController::class, 'show'])->middleware('auth:sanctum');
-Route::post('/categories', [App\Http\Controllers\Api\CategoryController::class, 'store'])->middleware('auth:sanctum');
-Route::post('/categories/edit', [App\Http\Controllers\Api\CategoryController::class, 'update'])->middleware('auth:sanctum');
-Route::delete('/categories/{id}', [App\Http\Controllers\Api\CategoryController::class, 'destroy'])->middleware('auth:sanctum');
+// Finance: incomes & expenses (with categories)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/incomes', [App\Http\Controllers\Api\IncomeController::class, 'index']);
+    Route::post('/incomes', [App\Http\Controllers\Api\IncomeController::class, 'store']);
+    Route::get('/incomes/{income}', [App\Http\Controllers\Api\IncomeController::class, 'show']);
+    Route::put('/incomes/{income}', [App\Http\Controllers\Api\IncomeController::class, 'update']);
+    Route::delete('/incomes/{income}', [App\Http\Controllers\Api\IncomeController::class, 'destroy']);
 
-// api resource additional charge
-Route::apiResource('additional_charges', \App\Http\Controllers\Api\AdditionalChargeController::class)->middleware('auth:sanctum');
+    Route::get('/expenses', [App\Http\Controllers\Api\ExpenseController::class, 'index']);
+    Route::post('/expenses', [App\Http\Controllers\Api\ExpenseController::class, 'store']);
+    Route::get('/expenses/{expense}', [App\Http\Controllers\Api\ExpenseController::class, 'show']);
+    Route::put('/expenses/{expense}', [App\Http\Controllers\Api\ExpenseController::class, 'update']);
+    Route::delete('/expenses/{expense}', [App\Http\Controllers\Api\ExpenseController::class, 'destroy']);
 
-// api resource report
-Route::get('/reports/summary', [App\Http\Controllers\Api\ReportController::class, 'summary'])->middleware('auth:sanctum');
-Route::get('/reports/product-sales', [App\Http\Controllers\Api\ReportController::class, 'productSales'])->middleware('auth:sanctum');
+    Route::get('/income-categories', [App\Http\Controllers\Api\IncomeCategoryController::class, 'index']);
+    Route::post('/income-categories', [App\Http\Controllers\Api\IncomeCategoryController::class, 'store']);
+    Route::put('/income-categories/{income_category}', [App\Http\Controllers\Api\IncomeCategoryController::class, 'update']);
+    Route::delete('/income-categories/{income_category}', [App\Http\Controllers\Api\IncomeCategoryController::class, 'destroy']);
 
-Route::post('/order-temporary', [App\Http\Controllers\Api\OrderTemporaryController::class, 'store'])->middleware('auth:sanctum');
-Route::put('/order-temporary/{customer_name}', [App\Http\Controllers\Api\OrderTemporaryController::class, 'updateStatus'])->middleware('auth:sanctum');
-Route::get('/order-temporary', [App\Http\Controllers\Api\OrderTemporaryController::class, 'getOpenOrderTemporary'])->middleware('auth:sanctum');
-Route::get('/order-temporary/{customer_name}', [App\Http\Controllers\Api\OrderTemporaryController::class, 'getOpenOrderTemporaryWithItems'])->middleware('auth:sanctum');
+    Route::get('/expense-categories', [App\Http\Controllers\Api\ExpenseCategoryController::class, 'index']);
+    Route::post('/expense-categories', [App\Http\Controllers\Api\ExpenseCategoryController::class, 'store']);
+    Route::put('/expense-categories/{expense_category}', [App\Http\Controllers\Api\ExpenseCategoryController::class, 'update']);
+    Route::delete('/expense-categories/{expense_category}', [App\Http\Controllers\Api\ExpenseCategoryController::class, 'destroy']);
+});
 
-Route::post('/vouchers', [App\Http\Controllers\Api\VoucherController::class, 'store']);
-Route::post('/vouchers/redeem/{code}', [App\Http\Controllers\Api\VoucherController::class, 'redeem']);
+// Raw materials & inventory endpoints removed (inventory module disabled)
+
+// Employee management endpoints removed (employee module disabled)
+
+// Attendance API removed (attendance module disabled)
+
+// Attendance report API removed
 
 // Batch sync endpoints for offline support
 Route::prefix('sync')->middleware('auth:sanctum')->group(function () {

@@ -28,6 +28,16 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Rate limiter khusus absensi (lebih ketat)
+        RateLimiter::for('attendance', function (Request $request) {
+            $key = $request->user()?->id
+                ?: ($request->header('X-Device-ID') ?? $request->ip());
+            return [
+                Limit::perMinute(10)->by($key),
+                Limit::perHour(60)->by($key),
+            ];
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

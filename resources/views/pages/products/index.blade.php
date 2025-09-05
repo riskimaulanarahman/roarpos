@@ -87,7 +87,7 @@
                                                 </td>
                                                 <td>{{ $product->category->name ?? '-' }}</td>
                                                 <td>
-                                                    {{ $product->price }}
+                                                    {{ number_format((float) $product->price, 2, ',', '.') }}
                                                 </td>
                                                 <td>
                                                     @if ($product->image)

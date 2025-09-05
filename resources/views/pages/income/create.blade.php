@@ -20,23 +20,21 @@
                                     <input type="date" name="date" class="form-control" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Description</label>
-                                    <input type="text" name="desc" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Qty</label>
-                                    <input type="number" name="qty" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Harga Per Unit</label>
-                                    <input type="number" name="price_per_unit" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Tipe Pembayaran</label>
-                                    <select name="payment_type" class="form-control">
-                                        <option value="cash">Cash</option>
-                                        <option value="transfer">Transfer</option>
+                                    <label>Kategori</label>
+                                    <select name="category_id" class="form-control">
+                                        <option value="">-</option>
+                                        @foreach($categories as $cat)
+                                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                        @endforeach
                                     </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Jumlah</label>
+                                    <input type="number" step="0.01" name="amount" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Catatan</label>
+                                    <textarea name="notes" class="form-control"></textarea>
                                 </div>
                             </div>
                             <div class="card-footer text-right">

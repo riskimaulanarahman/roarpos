@@ -4,11 +4,7 @@ namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
-use App\Models\Category;
-use App\Models\Discount;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-
 
 class DatabaseSeeder extends Seeder
 {
@@ -20,6 +16,10 @@ class DatabaseSeeder extends Seeder
         // Use the comprehensive demo seeder
         $this->call([
             UpdatedDemoSeeder::class,
+            FinanceCategorySeeder::class,
+            RawMaterialSeeder::class,
+            ProductRecipeSeeder::class,
+            EmployeeSeeder::class,
         ]);
     }
 }
