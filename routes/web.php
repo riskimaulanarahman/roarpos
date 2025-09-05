@@ -68,8 +68,7 @@ Route::middleware('role:admin')->group(function () {
 Route::resource('user', UserController::class)->middleware('role:admin');
 
     Route::resource('product', \App\Http\Controllers\ProductController::class);
-    Route::post('products/wizard', [\App\Http\Controllers\ProductController::class,'storeWizard'])->name('product.wizard.store');
-    Route::put('products/{product}/wizard', [\App\Http\Controllers\ProductController::class,'updateWizard'])->name('product.wizard.update');
+    // Removed product wizard routes (no wizard/recipe/review forms)
     Route::resource('order', \App\Http\Controllers\OrderController::class);
     Route::get('/order/{id}/details-json', [\App\Http\Controllers\OrderController::class, 'showJson'])->name('order.details_json');
     Route::resource('category', \App\Http\Controllers\CategoryController::class);

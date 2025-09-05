@@ -42,8 +42,7 @@ class ProductController extends Controller
     public function create()
     {
         $categories = \App\Models\Category::orderBy('name')->get();
-        $materials = \App\Models\RawMaterial::orderBy('name')->get();
-        return view('pages.products.create', compact('categories','materials'));
+        return view('pages.products.create', compact('categories'));
     }
 
     // public function store(Request $request)
@@ -179,19 +178,7 @@ class ProductController extends Controller
     {
         $product = \App\Models\Product::findOrFail($id);
         $categories = \App\Models\Category::orderBy('name')->get();
-        $recipe = \App\Models\ProductRecipe::with('items')->firstOrNew(['product_id' => $product->id]);
-        $materials = \App\Models\RawMaterial::orderBy('name')->get();
-        $existingItems = [];
-        if ($recipe && $recipe->id) {
-            $existingItems = $recipe->items->map(function ($i) {
-                return [
-                    'raw_material_id' => $i->raw_material_id,
-                    'qty_per_yield' => $i->qty_per_yield,
-                    'waste_pct' => $i->waste_pct,
-                ];
-            })->values()->all();
-        }
-        return view('pages.products.edit', compact('product', 'categories','recipe','materials','existingItems'));
+        return view('pages.products.edit', compact('product', 'categories'));
     }
 
     // public function update(Request $request, $id)
