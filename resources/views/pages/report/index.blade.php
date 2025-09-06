@@ -6,6 +6,7 @@
     <!-- CSS Libraries -->
     <link rel="stylesheet" href="{{ asset('library/selectric/public/selectric.css') }}">
     <link rel="stylesheet" href="{{ asset('library/datatables/media/css/jquery.dataTables.css') }}">
+    <link rel="stylesheet" href="{{ asset('library/select2/dist/css/select2.min.css') }}">
 @endpush
 
 @section('main')
@@ -121,47 +122,35 @@
                                                 <select name="status" class="form-control">
                                                     <option value="">Semua</option>
                                                     @foreach(($statuses ?? []) as $s)
-                                                        <option value="{{ $s }}" {{ ($status ?? request('status')) == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
+                                                        <option value="{{ $s }}" {{ ($status ?? request('status','completed')) == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label>Metode Bayar</label>
-                                                <select name="payment_method" class="form-control">
-                                                    <option value="">Semua</option>
-                                                    @foreach(($paymentMethods ?? []) as $pm)
-                                                        <option value="{{ $pm }}" {{ ($paymentMethod ?? request('payment_method')) == $pm ? 'selected' : '' }}>{{ ucfirst($pm) }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-group">
-                                                <label>Kategori</label>
-                                                <select name="category_id" class="form-control">
-                                                    <option value="">Semua</option>
-                                                    @foreach(($categories ?? []) as $cat)
-                                                        <option value="{{ $cat->id }}" {{ ($categoryId ?? request('category_id')) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="row">
                                         <div class="col-md-3">
                                             <div class="form-group">
-                                                <label>Produk</label>
-                                                <select name="product_id" class="form-control">
-                                                    <option value="">Semua</option>
-                                                    @foreach(($products ?? []) as $prod)
-                                                        <option value="{{ $prod->id }}" {{ ($productId ?? request('product_id')) == $prod->id ? 'selected' : '' }}>{{ $prod->name }}</option>
+                                                <label>Metode Bayar</label>
+                                                @php($selPays = collect(($paymentMethod ?? (array) request('payment_method', [])))->map(fn($v)=> (string)$v)->all())
+                                                <select name="payment_method[]" class="form-control select2" multiple data-placeholder="Pilih metode bayar">
+                                                    @foreach(($paymentMethods ?? []) as $pm)
+                                                        <option value="{{ $pm }}" {{ in_array((string)$pm, $selPays, true) ? 'selected' : '' }}>{{ ucfirst($pm) }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label>Kategori</label>
+                                                @php($selCats = collect(($categoryId ?? (array) request('category_id', [])))->map(fn($v)=> (string)$v)->all())
+                                                <select name="category_id[]" class="form-control select2" multiple data-placeholder="Pilih kategori">
+                                                    @foreach(($categories ?? []) as $cat)
+                                                        <option value="{{ $cat->id }}" {{ in_array((string)$cat->id, $selCats, true) ? 'selected' : '' }}>{{ $cat->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
                                         </div>
                                     </div>
+                                    <!-- Produk filter removed -->
 
                                     <div class="row">
                                         <div class="col-md-2">
@@ -178,19 +167,17 @@
                                     @if(request('period')) @php($chips[] = 'Periode: '.ucfirst(request('period'))) @endif
                                     @if(request('date_from')) @php($chips[] = 'Dari: '.request('date_from')) @endif
                                     @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
-                                    @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
-                                    @if(request('payment_method')) @php($chips[] = 'Metode: '.ucfirst(request('payment_method'))) @endif
+                                    @php($chips[] = 'Status: '.ucfirst(request('status','completed')))
+                                    @php($pmSel = (array) request('payment_method', ($paymentMethod ?? [])))
+                                    @if(!empty($pmSel)) @php($chips[] = 'Metode: '.implode(', ', array_map('ucfirst',$pmSel))) @endif
                                     @if(request('year')) @php($chips[] = 'Tahun: '.request('year')) @endif
                                     @if(request('month')) @php($chips[] = 'Bulan: '.($monthNames[(int)request('month')] ?? request('month'))) @endif
                                     @if(request('week_in_month')) @php($chips[] = 'Minggu: '.strtoupper(request('week_in_month'))) @endif
                                     @if(request('last_days')) @php($chips[] = 'Terakhir: '.request('last_days').' hari') @endif
-                                    @if(request('category_id'))
-                                        @php($c = ($categories ?? collect())->firstWhere('id', request('category_id')))
-                                        @if($c) @php($chips[] = 'Kategori: '.$c->name) @endif
-                                    @endif
-                                    @if(request('product_id'))
-                                        @php($p = ($products ?? collect())->firstWhere('id', request('product_id')))
-                                        @if($p) @php($chips[] = 'Produk: '.$p->name) @endif
+                                    @php($selCatIds = (array) request('category_id', ($categoryId ?? [])))
+                                    @if(!empty($selCatIds))
+                                        @php($names = ($categories ?? collect())->whereIn('id', array_map('intval',$selCatIds))->pluck('name')->all())
+                                        @if(!empty($names)) @php($chips[] = 'Kategori: '.implode(', ',$names)) @endif
                                     @endif
                                     @if(count($chips))
                                         <div>
@@ -300,28 +287,21 @@
                                                     <input type="date" hidden name="date_to" value="{{ old('date_to') ?? request()->query('date_to') }}">
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <input type="text" hidden name="status" value="{{ request()->query('status') }}">
+                                                    <input type="text" hidden name="status" value="{{ request()->query('status','completed') }}">
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <input type="text" hidden name="payment_method" value="{{ request()->query('payment_method') }}">
+                                                    @php($dlPm = (array) request()->query('payment_method', []))
+                                                    @foreach($dlPm as $pmv)
+                                                        <input type="text" hidden name="payment_method[]" value="{{ $pmv }}">
+                                                    @endforeach
                                                 </div>
                                                 <div class="col-md-1">
-                                                    <input type="text" hidden name="category_id" value="{{ request()->query('category_id') }}">
+                                                    @php($dlCats = (array) request()->query('category_id', []))
+                                                    @foreach($dlCats as $cid)
+                                                        <input type="text" hidden name="category_id[]" value="{{ $cid }}">
+                                                    @endforeach
                                                 </div>
-                                                <div class="col-md-1">
-                                                    <input type="text" hidden name="product_id" value="{{ request()->query('product_id') }}">
-                                                </div>
-                                            </div>
-
-                                            <div class="row float-right w-100">
-                                                <div class="col-md-12">
-                                                    <div class="form-group">
-                                                        <button type="submit" class="btn btn-primary btn-lg btn-block"
-                                                            tabindex="4">
-                                                            Download
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                                <!-- product filter removed -->
                                             </div>
 
                                         </form>
@@ -339,6 +319,7 @@
 @push('scripts')
     <!-- JS Libraies -->
     <script src="{{ asset('library/selectric/public/jquery.selectric.min.js') }}"></script>
+    <script src="{{ asset('library/select2/dist/js/select2.min.js') }}"></script>
 
     <!-- Page Specific JS File -->
     {{-- <script src="assets/js/page/forms-advanced-forms.js"></script> --}}
@@ -439,7 +420,7 @@
             const weekCol = document.getElementById('weekCol');
             const dateRange = document.getElementById('dateRangeContainer');
             const toggleOthers = (show)=>{
-                ['status','payment_method','category_id','product_id','user_id'].forEach(n=>{
+                ['payment_method[]','category_id[]','user_id'].forEach(n=>{
                     const el=document.querySelector(`[name="${n}"]`);
                     if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12');
                     if(col) col.style.display = show ? '' : 'none';
@@ -492,15 +473,25 @@
 
         function savePrefs(prefix){
             const f=document.querySelector('form[action*="filter"]')||document.querySelector('form'); if(!f) return;
-            const names=['date_from','date_to','period','status','payment_method','category_id','product_id'];
-            const data={}; names.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; });
+            const data={};
+            ['date_from','date_to','period','status'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; });
+            const pmSel=f.querySelector('[name="payment_method[]"]'); if(pmSel){ data['payment_method'] = Array.from(pmSel.selectedOptions).map(o=>o.value); }
+            const catSel=f.querySelector('[name="category_id[]"]'); if(catSel){ data['category_id'] = Array.from(catSel.selectedOptions).map(o=>o.value); }
             localStorage.setItem(prefix, JSON.stringify(data));
         }
         function loadPrefs(prefix){
             const q = new URLSearchParams(window.location.search);
             if([...q.keys()].length) return; // jangan override jika datang dari query
             const raw=localStorage.getItem(prefix); if(!raw) return; const data=JSON.parse(raw);
-            Object.entries(data).forEach(([k,v])=>{ const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v; });
+            Object.entries(data).forEach(([k,v])=>{
+                if(k==='payment_method' && Array.isArray(v)){
+                    const el=document.querySelector('[name="payment_method[]"]'); if(el){ Array.from(el.options).forEach(o=>o.selected = v.includes(o.value)); }
+                } else if(k==='category_id' && Array.isArray(v)){
+                    const el=document.querySelector('[name="category_id[]"]'); if(el){ Array.from(el.options).forEach(o=>o.selected = v.includes(o.value)); }
+                } else {
+                    const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v;
+                }
+            });
         }
         function exportDataTableCSV(table, filename){
             const rows = [];
@@ -514,6 +505,19 @@
         document.addEventListener('click', function(e){ const a=e.target.closest('.js-order-details'); if(!a) return; e.preventDefault(); const url=a.getAttribute('data-url'); if(!url) return; fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(renderOrderModal).catch(()=>alert('Gagal mengambil detail order')); });
 
         $(function(){
+            // Initialize Select2 for multi-select filters
+            if ($.fn.select2) {
+                $('[name="payment_method[]"]').select2({
+                    width: '100%',
+                    placeholder: $("[name='payment_method[]']").data('placeholder') || 'Pilih metode bayar',
+                    allowClear: true
+                });
+                $('[name="category_id[]"]').select2({
+                    width: '100%',
+                    placeholder: $("[name='category_id[]']").data('placeholder') || 'Pilih kategori',
+                    allowClear: true
+                });
+            }
             loadPrefs('report_order_filters');
             const table = $('#ordersTable').DataTable({ paging: true, info: true });
             function recomputeFromTable(){
@@ -550,7 +554,8 @@
             $('#btnResetFilters').on('click', function(){
                 const f=document.querySelector('form[action*="filter"]')||document.querySelector('form');
                 f.querySelector('[name="period"]').value='';
-                ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) el.value=''; });
+                const pms=f.querySelector('[name="payment_method[]"]'); if(pms){ Array.from(pms.options).forEach(o=>o.selected=false); }
+                const cats=f.querySelector('[name="category_id[]"]'); if(cats){ Array.from(cats.options).forEach(o=>o.selected=false); }
                 const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value='';
             });
             document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_order_filters'));

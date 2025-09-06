@@ -28,7 +28,7 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
         return $this;
     }
 
-    public function withFilters(?string $status, ?string $paymentMethod, ?string $categoryId, ?string $productId)
+    public function withFilters($status, $paymentMethod, $categoryId, $productId)
     {
         $this->status = $status;
         $this->paymentMethod = $paymentMethod;
@@ -49,16 +49,26 @@ class OrdersExport implements FromQuery, WithMapping, WithHeadings
             ->with('user')
             ->whereBetween('created_at', [$this->start, $this->end])
             ->when($this->userId, fn($q) => $q->where('user_id', $this->userId))
-            ->when($this->status, fn($q) => $q->where('status', $this->status))
-            ->when($this->paymentMethod, fn($q) => $q->where('payment_method', $this->paymentMethod))
+            ->when($this->status, function($q){
+                if (is_array($this->status)) { $q->whereIn('status', $this->status); }
+                else { $q->where('status', $this->status); }
+            })
+            ->when($this->paymentMethod, function($q){
+                if (is_array($this->paymentMethod)) { $q->whereIn('payment_method', $this->paymentMethod); }
+                else { $q->where('payment_method', $this->paymentMethod); }
+            })
             ->when($this->categoryId, function ($q) {
                 $categoryId = $this->categoryId;
                 $q->whereExists(function ($sub) use ($categoryId) {
                     $sub->select(DB::raw(1))
                         ->from('order_items')
                         ->join('products', 'order_items.product_id', '=', 'products.id')
-                        ->whereColumn('order_items.order_id', 'orders.id')
-                        ->where('products.category_id', $categoryId);
+                        ->whereColumn('order_items.order_id', 'orders.id');
+                    if (is_array($categoryId)) {
+                        $sub->whereIn('products.category_id', $categoryId);
+                    } else {
+                        $sub->where('products.category_id', $categoryId);
+                    }
                 });
             })
             ->when($this->productId, function ($q) {

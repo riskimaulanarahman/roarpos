@@ -5,6 +5,7 @@
 @push('style')
     <link rel="stylesheet" href="{{ asset('library/selectric/public/selectric.css') }}">
     <link rel="stylesheet" href="{{ asset('library/datatables/media/css/jquery.dataTables.css') }}">
+    <link rel="stylesheet" href="{{ asset('library/select2/dist/css/select2.min.css') }}">
 @endpush
 
 @section('main')
@@ -31,7 +32,7 @@
                                 <div class="form-group">
                                     <label>Periode <span class="text-muted" title="Pilih periode terlebih dahulu, lalu filter lainnya akan muncul">?</span></label>
                                     <select name="period" class="form-control" id="periodSelectDetail">
-                                        <option value="harian" {{ request('period')=='harian' ? 'selected' : '' }}>Harian</option>
+                                        <option value="harian" {{ (request()->has('period') ? request('period')=='harian' : true) ? 'selected' : '' }}>Harian</option>
                                         <option value="mingguan" {{ request('period')=='mingguan' ? 'selected' : '' }}>Mingguan</option>
                                         <option value="bulanan" {{ request('period')=='bulanan' ? 'selected' : '' }}>Bulanan</option>
                                         <option value="tahunan" {{ request('period')=='tahunan' ? 'selected' : '' }}>Tahunan</option>
@@ -106,17 +107,7 @@
                                     <input type="hidden" name="last_days" id="lastDaysInputDetail" value="{{ request('last_days') }}">
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Status</label>
-                                    <select name="status" class="form-control">
-                                        <option value="">Semua</option>
-                                        @foreach(($statuses ?? []) as $s)
-                                            <option value="{{ $s }}" {{ ($status ?? request('status')) == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
+                            <!-- Status filter removed; enforced to Completed -->
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Metode Bayar</label>
@@ -141,20 +132,11 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Produk</label>
-                                    <select name="product_id" class="form-control">
-                                        <option value="">Semua</option>
-                                        @foreach(($products ?? []) as $prod)
-                                            <option value="{{ $prod->id }}" {{ ($productId ?? request('product_id')) == $prod->id ? 'selected' : '' }}>{{ $prod->name }}</option>
-                                        @endforeach
-                                    </select>
+                            <div class="col-md-2">
+                                <div class="form-group d-flex">
+                                    <button type="submit" class="btn btn-primary btn-lg mr-2">Filter</button>
+                                    <button type="button" id="btnResetDetail" class="btn btn-light btn-lg">Reset</button>
                                 </div>
-                            </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary btn-lg mr-2">Filter</button>
-                                <button type="button" id="btnResetDetail" class="btn btn-light btn-lg">Reset</button>
                             </div>
                         </div>
                     </form>
@@ -164,7 +146,7 @@
                         @if(request('period')) @php($chips[] = 'Periode: '.ucfirst(request('period'))) @endif
                         @if(request('date_from')) @php($chips[] = 'Dari: '.request('date_from')) @endif
                         @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
-                        @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
+                        @php($chips[] = 'Status: Completed')
                         @if(request('payment_method')) @php($chips[] = 'Metode: '.ucfirst(request('payment_method'))) @endif
                         @if(request('year')) @php($chips[] = 'Tahun: '.request('year')) @endif
                         @if(request('month')) @php($chips[] = 'Bulan: '.($monthNames[(int)request('month')] ?? request('month'))) @endif
@@ -205,7 +187,7 @@
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div></div>
                             <div>
-                                <a class="btn btn-primary mr-2" href="{{ route('report.detail.download', request()->only(['date_from','date_to','status','payment_method','category_id','product_id','user_id'])) }}">Download</a>
+                                <a class="btn btn-primary mr-2" href="{{ route('report.detail.download', array_merge(request()->only(['date_from','date_to','payment_method','category_id','product_id','user_id']), ['status' => 'completed'])) }}">Download</a>
                                 <button type="button" id="btnExportDetail" class="btn btn-outline-primary">Export View (CSV)</button>
                             </div>
                         </div>
@@ -257,6 +239,7 @@
     <script src="{{ asset('library/datatables/media/js/jquery.dataTables.js') }}"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css" />
+    <script src="{{ asset('library/select2/dist/js/select2.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         function parseCurrency(str){ if(!str) return 0; return parseInt(String(str).replace(/[^0-9\-]/g,'')) || 0; }
@@ -293,7 +276,7 @@
             const period=document.getElementById('periodSelectDetail')?.value||'';
             const yc=document.getElementById('yearColDetail'); const mc=document.getElementById('monthColDetail'); const wc=document.getElementById('weekColDetail'); const dr=document.getElementById('dateRangeContainerDetail');
             const toggleOthers=(show)=>{
-                ['status','payment_method','category_id','product_id','user_id'].forEach(n=>{ const el=document.querySelector(`[name="${n}"]`); if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12'); if(col) col.style.display = show ? '' : 'none'; });
+                ['payment_method','category_id','product_id','user_id'].forEach(n=>{ const el=document.querySelector(`[name="${n}"]`); if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12'); if(col) col.style.display = show ? '' : 'none'; });
             };
             if(!period){ if(yc) yc.style.display='none'; if(mc) mc.style.display='none'; if(wc) wc.style.display='none'; if(dr) dr.style.display='none'; toggleOthers(false); return; }
             toggleOthers(true);
@@ -312,22 +295,34 @@
         document.getElementById('yearSelectDetail')?.addEventListener('change', recomputeRangeDetail);
         document.getElementById('monthSelectDetail')?.addEventListener('change', recomputeRangeDetail);
         document.getElementById('weekOptionSelectDetail')?.addEventListener('change', recomputeRangeDetail);
-        updateVisibilityDetail(); if(document.getElementById('periodSelectDetail')?.value){ recomputeRangeDetail(); }
+        updateVisibilityDetail();
+        (function(){
+            const dfEl = document.querySelector('input[name="date_from"]');
+            const dtEl = document.querySelector('input[name="date_to"]');
+            const hasServerDates = (dfEl && dfEl.value) || (dtEl && dtEl.value);
+            if(document.getElementById('periodSelectDetail')?.value && !hasServerDates){
+                recomputeRangeDetail();
+            }
+        })();
 
-        function savePrefs(prefix){ const f=document.querySelector('form'); const names=['date_from','date_to','period','status','payment_method','category_id','product_id']; const data={}; names.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; }); localStorage.setItem(prefix, JSON.stringify(data)); }
+        function savePrefs(prefix){ const f=document.querySelector('form'); const names=['date_from','date_to','period','payment_method','category_id','product_id']; const data={}; names.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; }); localStorage.setItem(prefix, JSON.stringify(data)); }
         function loadPrefs(prefix){ const q=new URLSearchParams(location.search); if([...q.keys()].length) return; const raw=localStorage.getItem(prefix); if(!raw) return; const data=JSON.parse(raw); Object.entries(data).forEach(([k,v])=>{ const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v; }); }
         function exportDataTableCSV(table, filename){ const rows=[]; const headers=[]; $(table.table().header()).find('th').each(function(){ headers.push($(this).text().trim()); }); rows.push(headers.join(',')); table.rows({search:'applied'}).every(function(){ const cols=[]; $(this.node()).find('td').each(function(){ cols.push('"'+$(this).text().trim().replace(/"/g,'""')+'"'); }); rows.push(cols.join(',')); }); const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); }
 
         $(function(){
+            // Enhance payment method and category selects with Select2 if available
+            if ($.fn.select2) {
+                $('[name="payment_method"]').select2({ width: '100%', placeholder: 'Semua', allowClear: true });
+                $('[name="category_id"]').select2({ width: '100%', placeholder: 'Semua', allowClear: true });
+            }
             loadPrefs('report_detail_filters');
             const dt = $('#detailTable').DataTable({ paging:true, info:true });
             function recompute(){ if(detailChart){ const revByDate={}; dt.rows({ search:'applied' }).every(function(){ const $r=$(this.node()); const tds=$r.find('td'); const date=$(tds.get(0)).text().trim().substring(0,10); const rev=parseCurrency($(tds.get(5)).text()); revByDate[date]=(revByDate[date]||0)+rev; }); const labels = Object.keys(revByDate).sort(); const revenue = labels.map(l=>revByDate[l]); detailChart.data.labels = labels; detailChart.data.datasets[0].data = revenue; detailChart.update('none'); }
                 let tq=0,tr=0; dt.rows({search:'applied'}).every(function(){ const tds=$(this.node()).find('td'); tq+=parseInt($(tds.get(4)).text())||0; tr+=parseCurrency($(tds.get(5)).text()); }); $('#ftQtyDetail').text(tq.toLocaleString('id-ID')); $('#ftRevDetail').text(tr.toLocaleString('id-ID')); }
             dt.on('draw', recompute); recompute();
             $('#btnExportDetail').on('click', ()=>exportDataTableCSV(dt,'report_detail_view.csv'));
-            $('#btnResetDetail').on('click', function(){ const f=document.querySelector('form'); f.querySelector('[name="period"]').value=''; ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) el.value=''; }); const df=f.querySelector('[name="date_from"]'); const dtm=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dtm) dtm.value=''; });
+            $('#btnResetDetail').on('click', function(){ const f=document.querySelector('form'); f.querySelector('[name="period"]').value=''; ['payment_method','category_id','product_id'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) el.value=''; }); const df=f.querySelector('[name="date_from"]'); const dtm=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dtm) dtm.value=''; });
             document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_detail_filters'));
         });
     </script>
 @endpush
-

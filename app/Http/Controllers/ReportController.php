@@ -43,10 +43,14 @@ class ReportController extends Controller
 
         $date_from  = $resolved['from'] ?? $request->date_from;
         $date_to    = $resolved['to'] ?? $request->date_to;
-        $status = $request->input('status');
-        $paymentMethod = $request->input('payment_method');
-        $categoryId = $request->input('category_id');
-        $productId = $request->input('product_id');
+        // Force completed status for report orders
+        // Status filter (default to completed if not specified)
+        $status = $request->input('status') ?: 'completed';
+        // Allow multi-select for payment methods and categories
+        $paymentMethod = array_values(array_filter((array)$request->input('payment_method', [])));
+        $categoryId = array_values(array_filter((array)$request->input('category_id', [])));
+        // Product filter removed for this page
+        $productId = null;
         $isAdmin = auth()->user()?->roles === 'admin';
         $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
         $year = $request->input('year');
@@ -59,25 +63,23 @@ class ReportController extends Controller
             ->whereDate('created_at', '>=', $date_from)
             ->whereDate('created_at', '<=', $date_to)
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when($status, fn($q) => $q->where('status', $status))
-            ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
+            ->when($status, function($q) use ($status){
+                if (is_array($status)) { $q->whereIn('status', $status); }
+                else { $q->where('status', $status); }
+            })
+            ->when($paymentMethod, function($q) use ($paymentMethod){
+                if (!empty($paymentMethod)) { $q->whereIn('payment_method', $paymentMethod); }
+            })
             ->when($categoryId, function ($q) use ($categoryId) {
                 $q->whereExists(function ($sub) use ($categoryId) {
                     $sub->select(DB::raw(1))
                         ->from('order_items')
                         ->join('products', 'order_items.product_id', '=', 'products.id')
                         ->whereColumn('order_items.order_id', 'orders.id')
-                        ->where('products.category_id', $categoryId);
+                        ->when(!empty($categoryId), function($qq) use ($categoryId){ $qq->whereIn('products.category_id', $categoryId); });
                 });
             })
-            ->when($productId, function ($q) use ($productId) {
-                $q->whereExists(function ($sub) use ($productId) {
-                    $sub->select(DB::raw(1))
-                        ->from('order_items')
-                        ->whereColumn('order_items.order_id', 'orders.id')
-                        ->where('order_items.product_id', $productId);
-                });
-            });
+            ;
 
         // Paginated rows for better performance on large datasets
         $orders = (clone $baseQuery)
@@ -95,10 +97,12 @@ class ReportController extends Controller
         $aov = $ordersCount > 0 ? round($totalRevenue / $ordersCount) : 0;
         $totalItemsSold = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
             ->whereBetween(DB::raw('DATE(orders.created_at)'), [$date_from, $date_to])
-            ->when($status, fn($q) => $q->where('orders.status', $status))
-            ->when($paymentMethod, fn($q) => $q->where('orders.payment_method', $paymentMethod))
-            ->when($categoryId, fn($q) => $q->join('products','order_items.product_id','=','products.id')->where('products.category_id', $categoryId))
-            ->when($productId, fn($q) => $q->where('order_items.product_id', $productId))
+            ->when($status, function($q) use ($status){
+                if (is_array($status)) { $q->whereIn('orders.status', $status); }
+                else { $q->where('orders.status', $status); }
+            })
+            ->when(!empty($paymentMethod), fn($q) => $q->whereIn('orders.payment_method', $paymentMethod))
+            ->when(!empty($categoryId), fn($q) => $q->join('products','order_items.product_id','=','products.id')->whereIn('products.category_id', $categoryId))
             ->when($userId, fn($q) => $q->where('orders.user_id', $userId))
             ->sum('order_items.quantity');
 
@@ -157,14 +161,14 @@ class ReportController extends Controller
         ];
 
         $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
-        $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
+        // products not used here
         $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
         $statuses = ['completed', 'refund', 'pending'];
         $users = $isAdmin
             ? User::orderBy('name')->get(['id','name'])
             : User::where('id', $userId)->get(['id','name']);
 
-        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','period','year','month','weekInMonth','lastDays','userId','users'));
+        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','paymentMethods','statuses','status','paymentMethod','categoryId','period','year','month','weekInMonth','lastDays','userId','users'));
     }
 
     public function byCategory(Request $request)
@@ -175,12 +179,15 @@ class ReportController extends Controller
         ]);
 
         $resolved = ReportDateRange::fromRequest($request);
-        $date_from = $resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString());
-        $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
-        $status = $request->input('status');
+        // Only load data after the Filter button is pressed.
+        $filtered = $request->boolean('filtered');
+        $date_from = $filtered ? ($resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString())) : null;
+        $date_to = $filtered ? ($resolved['to'] ?? ($request->date_to ?: now()->toDateString())) : null;
+        // Force completed status for this report
+        $status = 'completed';
         $paymentMethod = $request->input('payment_method');
-        $categoryId = $request->input('category_id');
-        $productId = $request->input('product_id');
+        // Allow multiple categories
+        $categoryIds = (array) $request->input('category_id', []);
         $isAdmin = auth()->user()?->roles === 'admin';
         $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
         $year = $request->input('year');
@@ -202,10 +209,11 @@ class ReportController extends Controller
                 ->join('categories', 'products.category_id', '=', 'categories.id')
                 ->whereBetween(DB::raw('DATE(orders.created_at)'), [$date_from, $date_to])
                 ->when($userId, fn($q) => $q->where('orders.user_id', $userId))
-                ->when($status, fn($q) => $q->where('orders.status', $status))
+                ->where('orders.status', $status)
                 ->when($paymentMethod, fn($q) => $q->where('orders.payment_method', $paymentMethod))
-                ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                ->when($productId, fn($q) => $q->where('order_items.product_id', $productId))
+                ->when(!empty($categoryIds), function ($q) use ($categoryIds) {
+                    $q->whereIn('products.category_id', $categoryIds);
+                })
                 ->groupBy('categories.name')
                 ->orderByDesc('total_price');
 
@@ -219,14 +227,30 @@ class ReportController extends Controller
         }
 
         $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
-        $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
         $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
-        $statuses = ['completed', 'refund', 'pending'];
+        // Status is fixed to completed for this page
         $users = $isAdmin
             ? User::orderBy('name')->get(['id','name'])
             : User::where('id', $userId)->get(['id','name']);
 
-        return view('pages.report.by_category', compact('categorySales', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId','year','month','weekInMonth','lastDays','userId','users'));
+        return view('pages.report.by_category', [
+            'categorySales' => $categorySales,
+            'chart' => $chart,
+            'date_from' => $date_from,
+            'date_to' => $date_to,
+            'categories' => $categories,
+            'paymentMethods' => $paymentMethods,
+            'status' => $status,
+            'paymentMethod' => $paymentMethod,
+            'categoryId' => $categoryIds,
+            'year' => $year,
+            'month' => $month,
+            'weekInMonth' => $weekInMonth,
+            'lastDays' => $lastDays,
+            'userId' => $userId,
+            'users' => $users,
+            'filtered' => $filtered,
+        ]);
     }
 
     public function detail(Request $request)
@@ -239,7 +263,7 @@ class ReportController extends Controller
         $resolved = ReportDateRange::fromRequest($request);
         $date_from = $resolved['from'] ?? ($request->date_from ?: now()->copy()->subDays(29)->toDateString());
         $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
-        $status = $request->input('status');
+        $status = 'completed';
         $paymentMethod = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
@@ -260,7 +284,7 @@ class ReportController extends Controller
                 ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
                 ->whereBetween(DB::raw('DATE(orders.created_at)'), [$date_from, $date_to])
                 ->when($userId, fn($q) => $q->where('orders.user_id', $userId))
-                ->when($status, fn($q) => $q->where('orders.status', $status))
+                ->where('orders.status', $status)
                 ->when($paymentMethod, fn($q) => $q->where('orders.payment_method', $paymentMethod))
                 ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
                 ->when($productId, fn($q) => $q->where('order_items.product_id', $productId))
@@ -313,12 +337,29 @@ class ReportController extends Controller
         $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
         $products = Product::where('user_id', $userId)->orderBy('name')->get(['id','name']);
         $paymentMethods = Order::where('user_id', $userId)->select('payment_method')->distinct()->pluck('payment_method')->filter()->values();
-        $statuses = ['completed', 'refund', 'pending'];
         $users = $isAdmin
             ? User::orderBy('name')->get(['id','name'])
             : User::where('id', $userId)->get(['id','name']);
 
-        return view('pages.report.detail', compact('items', 'chart', 'date_from', 'date_to', 'categories','products','paymentMethods','statuses','status','paymentMethod','categoryId','productId', 'period','year','month','weekInMonth','lastDays','userId','users'));
+        return view('pages.report.detail', [
+            'items' => $items,
+            'chart' => $chart,
+            'date_from' => $date_from,
+            'date_to' => $date_to,
+            'categories' => $categories,
+            'products' => $products,
+            'paymentMethods' => $paymentMethods,
+            'paymentMethod' => $paymentMethod,
+            'categoryId' => $categoryId,
+            'productId' => $productId,
+            'period' => $period,
+            'year' => $year,
+            'month' => $month,
+            'weekInMonth' => $weekInMonth,
+            'lastDays' => $lastDays,
+            'userId' => $userId,
+            'users' => $users,
+        ]);
     }
 
     // New: Payment Methods report
@@ -393,14 +434,15 @@ class ReportController extends Controller
         $date_to = $resolved['to'] ?? ($request->date_to ?: now()->toDateString());
         $isAdmin = auth()->user()?->roles === 'admin';
         $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
-        $status = $request->input('status');
+        // Force completed status for time report
+        $status = 'completed';
         $mode = $request->input('mode', 'hour');
 
         if ($mode === 'dow') {
             $rows = Order::query()
                 ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
                 ->when($userId, fn($q) => $q->where('user_id', $userId))
-                ->when($status, fn($q) => $q->where('status', $status))
+                ->where('status', $status)
                 ->select([
                     DB::raw('DAYOFWEEK(created_at) as bucket'),
                     DB::raw('SUM(total_price) as revenue'),
@@ -418,7 +460,7 @@ class ReportController extends Controller
             $rows = Order::query()
                 ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
                 ->when($userId, fn($q) => $q->where('user_id', $userId))
-                ->when($status, fn($q) => $q->where('status', $status))
+                ->where('status', $status)
                 ->select([
                     DB::raw("DATE_FORMAT(created_at, '%H') as bucket"),
                     DB::raw('SUM(total_price) as revenue'),
@@ -437,12 +479,11 @@ class ReportController extends Controller
             'mode' => $mode,
         ];
 
-        $statuses = ['completed', 'refund', 'pending'];
         $users = $isAdmin
             ? User::orderBy('name')->get(['id','name'])
             : User::where('id', $userId)->get(['id','name']);
 
-        return view('pages.report.time', compact('rows','chart','date_from','date_to','statuses','userId','users','status','mode'));
+        return view('pages.report.time', compact('rows','chart','date_from','date_to','userId','users','mode'));
     }
 
     // New: Refunds report
@@ -497,10 +538,11 @@ class ReportController extends Controller
 
         $date_from  = $request->date_from;
         $date_to    = $request->date_to;
-        $status = $request->input('status');
-        $payment = $request->input('payment_method');
-        $categoryId = $request->input('category_id');
-        $productId = $request->input('product_id');
+        // Default/force status to completed for order report
+        $status = $request->input('status') ?: 'completed';
+        $payment = array_values(array_filter((array)$request->input('payment_method', [])));
+        $categoryId = array_values(array_filter((array)$request->input('category_id', [])));
+        $productId = null; // removed from UI
 
         return (new OrdersExport)
             ->forRange($date_from, $date_to)
@@ -517,7 +559,8 @@ class ReportController extends Controller
         ]);
         $date_from = $request->date_from;
         $date_to = $request->date_to;
-        $status = $request->input('status');
+        // Default to completed if not provided
+        $status = $request->input('status') ?: 'completed';
         $payment = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');
@@ -538,7 +581,7 @@ class ReportController extends Controller
         ]);
         $date_from = $request->date_from;
         $date_to = $request->date_to;
-        $status = $request->input('status');
+        $status = $request->input('status') ?: 'completed';
         $payment = $request->input('payment_method');
         $categoryId = $request->input('category_id');
         $productId = $request->input('product_id');

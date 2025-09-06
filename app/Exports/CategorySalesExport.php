@@ -34,7 +34,7 @@ class CategorySalesExport implements FromQuery, WithMapping, WithHeadings
         return $this;
     }
 
-    public function withFilters(?string $status, ?string $paymentMethod, ?string $categoryId, ?string $productId)
+    public function withFilters(?string $status, ?string $paymentMethod, $categoryId, $productId)
     {
         $this->status = $status;
         $this->paymentMethod = $paymentMethod;
@@ -57,7 +57,16 @@ class CategorySalesExport implements FromQuery, WithMapping, WithHeadings
             ->when($this->userId, fn($q) => $q->where('orders.user_id', $this->userId))
             ->when($this->status, fn($q) => $q->where('orders.status', $this->status))
             ->when($this->paymentMethod, fn($q) => $q->where('orders.payment_method', $this->paymentMethod))
-            ->when($this->categoryId, fn($q) => $q->where('products.category_id', $this->categoryId))
+            ->when($this->categoryId, function($q){
+                if (is_array($this->categoryId)) {
+                    $ids = array_filter($this->categoryId, fn($v)=>$v!==null && $v!=='');
+                    if (!empty($ids)) {
+                        $q->whereIn('products.category_id', $ids);
+                    }
+                } else {
+                    $q->where('products.category_id', $this->categoryId);
+                }
+            })
             ->when($this->productId, fn($q) => $q->where('order_items.product_id', $this->productId))
             ->groupBy('categories.name')
             ->orderByDesc('total_price');

@@ -5,6 +5,7 @@
 @push('style')
     <link rel="stylesheet" href="{{ asset('library/selectric/public/selectric.css') }}">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css" />
+    <link rel="stylesheet" href="{{ asset('library/select2/dist/css/select2.min.css') }}">
 @endpush
 
 @section('main')
@@ -176,8 +177,15 @@
 
 @push('scripts')
     <script src="{{ asset('library/selectric/public/jquery.selectric.min.js') }}"></script>
+    <script src="{{ asset('library/select2/dist/js/select2.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+      // Enhance payment method select with Select2
+      if (window.jQuery && jQuery.fn && jQuery.fn.select2) {
+        jQuery(function($){
+          $('[name="payment_method"]').select2({ width: '100%', placeholder: 'Semua', allowClear: true });
+        });
+      }
       const paymentsPayload = @json($chart ?? null);
       if (paymentsPayload) {
         const ctx = document.getElementById('paymentsChart').getContext('2d');

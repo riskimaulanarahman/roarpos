@@ -5,6 +5,7 @@
 @push('style')
     <link rel="stylesheet" href="{{ asset('library/selectric/public/selectric.css') }}">
     <link rel="stylesheet" href="{{ asset('library/datatables/media/css/jquery.dataTables.css') }}">
+    <link rel="stylesheet" href="{{ asset('library/select2/dist/css/select2.min.css') }}">
 @endpush
 
 @section('main')
@@ -26,6 +27,7 @@
                 </div>
                 <div class="card-body">
                     <form action="{{ route('report.byCategory') }}" method="GET">
+                        <input type="hidden" name="filtered" value="1">
                         <div class="row">
                             <div class="col-md-3">
                                 <div class="form-group">
@@ -106,17 +108,7 @@
                                     <input type="hidden" name="last_days" id="lastDaysInputCat" value="{{ request('last_days') }}">
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <div class="form-group">
-                                    <label>Status</label>
-                                    <select name="status" class="form-control">
-                                        <option value="">Semua</option>
-                                        @foreach(($statuses ?? []) as $s)
-                                            <option value="{{ $s }}" {{ ($status ?? request('status')) == $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
+                            <!-- Status filter removed; report always uses Completed -->
                             <div class="col-md-2">
                                 <div class="form-group">
                                     <label>Metode Bayar</label>
@@ -128,33 +120,24 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Kategori</label>
-                                    <select name="category_id" class="form-control">
-                                        <option value="">Semua</option>
+                                    @php($selCats = collect(($categoryId ?? (array) request('category_id', [])))->map(fn($v)=> (string)$v)->all())
+                                    <select name="category_id[]" class="form-control select2" multiple data-placeholder="Pilih kategori">
                                         @foreach(($categories ?? []) as $cat)
-                                            <option value="{{ $cat->id }}" {{ ($categoryId ?? request('category_id')) == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
+                                            <option value="{{ $cat->id }}" {{ in_array((string)$cat->id, $selCats, true) ? 'selected' : '' }}>{{ $cat->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Produk</label>
-                                    <select name="product_id" class="form-control">
-                                        <option value="">Semua</option>
-                                        @foreach(($products ?? []) as $prod)
-                                            <option value="{{ $prod->id }}" {{ ($productId ?? request('product_id')) == $prod->id ? 'selected' : '' }}>{{ $prod->name }}</option>
-                                        @endforeach
-                                    </select>
+                            <div class="col-md-2">
+                                <div class="form-group d-flex">
+                                    <button type="submit" class="btn btn-primary btn-lg mr-2">Filter</button>
+                                    <button type="button" id="btnResetCat" class="btn btn-light btn-lg">Reset</button>
                                 </div>
-                            </div>
-                            <div class="col-md-3 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary btn-lg mr-2">Filter</button>
-                                <button type="button" id="btnResetCat" class="btn btn-light btn-lg">Reset</button>
                             </div>
                         </div>
                     </form>
@@ -164,19 +147,18 @@
                         @if(request('period')) @php($chips[] = 'Periode: '.ucfirst(request('period'))) @endif
                         @if(request('date_from')) @php($chips[] = 'Dari: '.request('date_from')) @endif
                         @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
-                        @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
+                        @php($chips[] = 'Status: Completed')
                         @if(request('payment_method')) @php($chips[] = 'Metode: '.ucfirst(request('payment_method'))) @endif
                         @if(request('year')) @php($chips[] = 'Tahun: '.request('year')) @endif
                         @if(request('month')) @php($chips[] = 'Bulan: '.($monthNames[(int)request('month')] ?? request('month'))) @endif
                         @if(request('week_in_month')) @php($chips[] = 'Minggu: '.strtoupper(request('week_in_month'))) @endif
                         @if(request('last_days')) @php($chips[] = 'Terakhir: '.request('last_days').' hari') @endif
-                        @if(request('category_id'))
-                            @php($c = ($categories ?? collect())->firstWhere('id', request('category_id')))
-                            @if($c) @php($chips[] = 'Kategori: '.$c->name) @endif
-                        @endif
-                        @if(request('product_id'))
-                            @php($p = ($products ?? collect())->firstWhere('id', request('product_id')))
-                            @if($p) @php($chips[] = 'Produk: '.$p->name) @endif
+                        @php($selectedCats = (array) request('category_id', ($categoryId ?? [])))
+                        @if(!empty($selectedCats))
+                            @php($names = ($categories ?? collect())->whereIn('id', array_map('intval', $selectedCats))->pluck('name')->all())
+                            @foreach($names as $nm)
+                                @php($chips[] = 'Kategori: '.$nm)
+                            @endforeach
                         @endif
                         @if(count($chips))
                             <div>
@@ -189,7 +171,7 @@
                 </div>
             </div>
 
-            @if(isset($categorySales) && $categorySales->count() > 0)
+            @if(($filtered ?? false) && isset($categorySales) && $categorySales->count() > 0)
                 <div class="card">
                     <div class="card-header"><h4>Category Performance</h4></div>
                     <div class="card-body">
@@ -203,7 +185,6 @@
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div></div>
                             <div>
-                                <a class="btn btn-primary mr-2" href="{{ route('report.byCategory.download', request()->only(['date_from','date_to','status','payment_method','category_id','product_id','user_id'])) }}">Download</a>
                                 <button type="button" id="btnExportCat" class="btn btn-outline-primary">Export View (CSV)</button>
                             </div>
                         </div>
@@ -239,7 +220,7 @@
                         </div>
                     </div>
                 </div>
-            @elseif(isset($date_from, $date_to))
+            @elseif(($filtered ?? false) && isset($date_from, $date_to))
                 <div class="alert alert-warning">No data found for the selected date range.</div>
             @endif
         </div>
@@ -252,6 +233,7 @@
     <script src="{{ asset('library/datatables/media/js/jquery.dataTables.js') }}"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css" />
+    <script src="{{ asset('library/select2/dist/js/select2.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         function parseCurrency(str){ if(!str) return 0; return parseInt(String(str).replace(/[^0-9\-]/g,'')) || 0; }
@@ -293,7 +275,7 @@
             const period=document.getElementById('periodSelectCat')?.value||'';
             const yc=document.getElementById('yearColCat'); const mc=document.getElementById('monthColCat'); const wc=document.getElementById('weekColCat'); const dr=document.getElementById('dateRangeContainerCat');
             const toggleOthers=(show)=>{
-                ['status','payment_method','category_id','product_id','user_id'].forEach(n=>{ const el=document.querySelector(`[name="${n}"]`); if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12'); if(col) col.style.display = show ? '' : 'none'; });
+                ['payment_method','category_id[]','user_id'].forEach(n=>{ const el=document.querySelector(`[name="${n}"]`); if(!el) return; const col=el.closest('.col-md-1, .col-md-2, .col-md-3, .col-md-6, .col-md-12'); if(col) col.style.display = show ? '' : 'none'; });
             };
             if(!period){ if(yc) yc.style.display='none'; if(mc) mc.style.display='none'; if(wc) wc.style.display='none'; if(dr) dr.style.display='none'; toggleOthers(false); return; }
             toggleOthers(true);
@@ -315,13 +297,24 @@
         updateVisibilityCat(); if(document.getElementById('periodSelectCat')?.value){ recomputeRangeCat(); }
 
         function savePrefs(prefix){
-            const f=document.querySelector('form'); const names=['date_from','date_to','period','status','payment_method','category_id','product_id'];
-            const data={}; names.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; });
+            const f=document.querySelector('form');
+            const data={};
+            const singleNames=['date_from','date_to','period','payment_method'];
+            singleNames.forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; });
+            const catSel=f.querySelector('[name="category_id[]"]');
+            if(catSel){ data['category_id'] = Array.from(catSel.selectedOptions).map(o=>o.value); }
             localStorage.setItem(prefix, JSON.stringify(data));
         }
         function loadPrefs(prefix){
             const q=new URLSearchParams(location.search); if([...q.keys()].length) return; const raw=localStorage.getItem(prefix); if(!raw) return; const data=JSON.parse(raw);
-            Object.entries(data).forEach(([k,v])=>{ const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v; });
+            Object.entries(data).forEach(([k,v])=>{
+                if(k==='category_id' && Array.isArray(v)){
+                    const el=document.querySelector('[name="category_id[]"]');
+                    if(el){ Array.from(el.options).forEach(o=>{ o.selected = v.includes(o.value); }); }
+                } else {
+                    const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v;
+                }
+            });
         }
         function exportDataTableCSV(table, filename){
             const rows=[]; const headers=[]; $(table.table().header()).find('th').each(function(){ headers.push($(this).text().trim()); }); rows.push(headers.join(','));
@@ -330,6 +323,15 @@
         }
 
         $(function(){
+            // Initialize Select2 for category multi-select and payment method if available
+            if ($.fn.select2) {
+                $('[name="category_id[]"]').select2({
+                    width: '100%',
+                    placeholder: $("[name='category_id[]']").data('placeholder') || 'Pilih kategori',
+                    allowClear: true
+                });
+                $('[name="payment_method"]').select2({ width: '100%', placeholder: 'Semua', allowClear: true });
+            }
             loadPrefs('report_by_category_filters');
             const dt = $('#categoryTable').DataTable({ paging:true, info:true });
             function updateChart(){ if(!categoryChart) return; const qtyByLabel={}, revByLabel={};
@@ -345,9 +347,14 @@
             }
             dt.on('draw', updateChart); updateChart();
             $('#btnExportCat').on('click', ()=>exportDataTableCSV(dt,'report_category_view.csv'));
-            $('#btnResetCat').on('click', function(){ const f=document.querySelector('form'); f.querySelector('[name="period"]').value=''; ['status','payment_method','category_id','product_id'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) el.value=''; }); const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value=''; });
+            $('#btnResetCat').on('click', function(){
+                const f=document.querySelector('form');
+                f.querySelector('[name="period"]').value='';
+                const pm=f.querySelector('[name="payment_method"]'); if(pm) pm.value='';
+                const cat=f.querySelector('[name="category_id[]"]'); if(cat){ Array.from(cat.options).forEach(o=>o.selected=false); }
+                const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value='';
+            });
             document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_by_category_filters'));
         });
     </script>
 @endpush
-

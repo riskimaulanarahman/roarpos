@@ -3,7 +3,7 @@
 @section('title', 'General Dashboard')
 
 @push('style')
-    <!-- CSS Libraries -->
+    <!-- CSS Libraries (tetap, tanpa CSS custom tambahan) -->
     <link rel="stylesheet" href="{{ asset('library/jqvmap/dist/jqvmap.min.css') }}">
     <link rel="stylesheet" href="{{ asset('library/summernote/dist/summernote-bs4.min.css') }}">
 @endpush
@@ -12,23 +12,23 @@
     <div class="main-content">
         <section class="section">
             <div class="section-header">
-                <h1>Dashboard - CASHIER POS</h1>
+                <h1 class="h4 h3-md mb-0">Dashboard - TOGA POS ({{ Auth::user()->store_name }})</h1>
             </div>
+
+            {{-- ===== KPI SECTION ===== --}}
             <div class="row">
-                {{-- === USERS (ADMIN ONLY) === --}}
+                {{-- Admin: Users --}}
                 @if(Auth::check() && Auth::user()->roles === 'admin')
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <a href="{{ route('user.index') }}">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-primary">
-                                <i class="far fa-user"></i>
-                            </div>
-                            <div class="card-wrap">
-                                <div class="card-header">
-                                    <h4>Users</h4>
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-12 mb-3">
+                    <a href="{{ route('user.index') }}" class="text-decoration-none">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body d-flex align-items-center">
+                                <div class="mr-3 d-flex align-items-center justify-content-center bg-primary text-white rounded px-3 py-2">
+                                    <i class="far fa-user"></i>
                                 </div>
-                                <div class="card-body">
-                                    {{ $users }}
+                                <div>
+                                    <div class="text-muted small">Users</div>
+                                    <div class="h4 mb-0">{{ $users }}</div>
                                 </div>
                             </div>
                         </div>
@@ -36,306 +36,220 @@
                 </div>
                 @endif
 
-                {{-- === PRODUCT (semua user) === --}}
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <a href="{{ route('product.index') }}">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-danger">
-                                <i class="fas fa-bread-slice" style="color: #ffffff;"></i>
+                {{-- Revenue (Completed) --}}
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-12 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="mr-3 d-flex align-items-center justify-content-center bg-success text-white rounded px-3 py-2">
+                                <i class="fas fa-money-bill-wave"></i>
                             </div>
-                            <div class="card-wrap">
-                                <div class="card-header">
-                                    <h4>Product</h4>
-                                </div>
-                                <div class="card-body">
-                                    {{ $products }}
-                                </div>
+                            <div>
+                                <div class="text-muted small">Revenue (Completed)</div>
+                                <div class="h4 mb-0">{{ number_format($monthlyCompletedRevenue ?? 0) }}</div>
                             </div>
                         </div>
-                    </a>
+                    </div>
                 </div>
 
-                {{-- === CATEGORY (semua user) === --}}
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <a href="{{ route('category.index') }}">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-success">
-                                <i class="far fa-folder-open" style="color: #ffffff;"></i>
+                {{-- Orders (Completed) --}}
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-12 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="mr-3 d-flex align-items-center justify-content-center bg-primary text-white rounded px-3 py-2">
+                                <i class="fas fa-receipt"></i>
                             </div>
-                            <div class="card-wrap">
-                                <div class="card-header">
-                                    <h4>Category</h4>
-                                </div>
-                                <div class="card-body">
-                                    {{ $categories }}
-                                </div>
+                            <div>
+                                <div class="text-muted small">Orders (Completed)</div>
+                                <div class="h4 mb-0">{{ number_format($monthlyCompletedOrders ?? 0) }}</div>
                             </div>
                         </div>
-                    </a>
+                    </div>
                 </div>
 
-                {{-- === DISCOUNTS (ADMIN ONLY) === --}}
-                @if(Auth::check() && Auth::user()->roles === 'admin' && isset($discounts))
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <a href="{{ route('discount.index') }}">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-warning">
-                                <i class="fas fa-percentage"></i>
+                {{-- AOV (Completed) --}}
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-12 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="mr-3 d-flex align-items-center justify-content-center bg-info text-white rounded px-3 py-2">
+                                <i class="fas fa-divide"></i>
                             </div>
-                            <div class="card-wrap">
-                                <div class="card-header">
-                                    <h4>Discounts</h4>
-                                </div>
-                                <div class="card-body">
-                                    {{ $discounts }}
-                                </div>
+                            <div>
+                                <div class="text-muted small">AOV (Completed)</div>
+                                <div class="h4 mb-0">{{ number_format($monthlyAov ?? 0) }}</div>
                             </div>
                         </div>
-                    </a>
-                </div>
-                @endif
-
-                {{-- === ADDITIONAL CHARGES (ADMIN ONLY) === --}}
-                @if(Auth::check() && Auth::user()->roles === 'admin' && isset($additional_charges))
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <a href="{{ route('additional_charge.index') }}">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-info">
-                                <i class="fas fa-hand-holding-usd"></i>
-                            </div>
-                            <div class="card-wrap">
-                                <div class="card-header">
-                                    <h4>Additional Charges</h4>
-                                </div>
-                                <div class="card-body">
-                                    {{ $additional_charges }}
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                @endif
-
-                {{-- === ORDERS (semua user) === --}}
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <a href="{{ route('order.index') }}">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-primary">
-                                <i class="far fa-newspaper"></i>
-                            </div>
-                            <div class="card-wrap">
-                                <div class="card-header">
-                                    <h4>Orders</h4>
-                                </div>
-                                <div class="card-body">
-                                    {{ $ordersLength }}
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+                    </div>
                 </div>
 
-                {{-- === REPORT (tetap seperti semula; jika perlu khusus admin, tinggal bungkus @if admin) === --}}
-                <div class="col-lg-3 col-md-6 col-sm-6 col-12">
-                    <a href="{{ route('report.index') }}">
-                        <div class="card card-statistic-1">
-                            <div class="card-icon bg-danger">
-                                <i class="fas fa-book-open"></i>
+                {{-- Payment Methods --}}
+                <div class="col-xl-3 col-lg-3 col-md-6 col-sm-6 col-12 mb-3">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="mr-3 d-flex align-items-center justify-content-center bg-warning text-white rounded px-3 py-2">
+                                <i class="fas fa-credit-card"></i>
                             </div>
-                            <div class="card-wrap">
-                                <div class="card-header">
-                                    <h4>Report</h4>
-                                    <div class="card-body">
-                                        3
-                                    </div>
-                                </div>
+                            <div>
+                                <div class="text-muted small">Payment Methods</div>
+                                <div class="h4 mb-0">{{ number_format($monthlyPaymentMethods ?? 0) }}</div>
                             </div>
                         </div>
-                    </a>
+                    </div>
                 </div>
             </div>
 
-            {{-- === TABEL SALES HARI INI (semua user) === --}}
-            <div>
+            {{-- ===== TABEL SALES HARI INI ===== --}}
+            <div class="row">
                 <div class="col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-wrap">
-                            <div class="d-flex justify-content-between align-items-center m-4">
-                                <h4 style="color: #3949AB; font-weight: 600">Total Sales Today</h4>
-                                <h4 style="color: #3949AB; font-weight: bold">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3">
+                                <h4 class="text-primary mb-2 mb-md-0">Total Sales Today</h4>
+                                <h4 class="text-primary font-weight-bold mb-0">
                                     {{ number_format($totalPriceToday, 0, ',', '.') }}
                                 </h4>
                             </div>
-                            <div class="clearfix mb-3"></div>
-                            <table class="table-striped table">
-                                <tr>
-                                    <th>Transaction Time</th>
-                                    {{-- <th>Sub Total</th>
-                                    <th>Discount</th>
-                                    <th>Tax</th>
-                                    <th>Service</th> --}}
-                                    <th>Total Price</th>
-                                    <th>Total Item</th>
-                                    <th>Payment Method</th>
-                                    <th>Status</th>
-                                    <th>Kasir</th>
-                                </tr>
-                                @foreach ($orders as $order)
-                                    <tr>
-                                        <td>
-                                            <a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">{{ $order->transaction_time }}</a>
-                                        </td>
-                                        {{-- <td>{{ number_format($order->sub_total, 0, ',', '.') }}</td>
-                                        <td>{{ number_format($order->discount_amount, 0, ',', '.') }}</td>
-                                        <td>{{ number_format($order->tax, 0, ',', '.') }}</td>
-                                        <td>{{ number_format($order->service_charge, 0, ',', '.') }}</td> --}}
-                                        <td>{{ number_format($order->total_price, 0, ',', '.') }}</td>
-                                        <td>{{ $order->total_item }}</td>
-                                        <td>{{ $order->payment_method ?? '-' }}</td>
-                                        <td>{{ ucfirst($order->status ?? '-') }}</td>
-                                        <td>{{ $order->user->name }}</td>
-                                    </tr>
-                                @endforeach
-                            </table>
-                        </div>
-                        <div class="float-right">
-                            {{ $orders->withQueryString()->links() }}
+
+                            <div class="table-responsive">
+                                <table class="table table-striped mb-3">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Transaction Time</th>
+                                            <th>Total Price</th>
+                                            <th>Total Item</th>
+                                            <th>Payment Method</th>
+                                            <th>Status</th>
+                                            <th>Kasir</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($orders as $order)
+                                            <tr>
+                                                <td>
+                                                    <a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">
+                                                        {{ $order->transaction_time }}
+                                                    </a>
+                                                </td>
+                                                <td>{{ number_format($order->total_price, 0, ',', '.') }}</td>
+                                                <td>{{ $order->total_item }}</td>
+                                                <td>{{ $order->payment_method ?? '-' }}</td>
+                                                <td>{{ ucfirst($order->status ?? '-') }}</td>
+                                                <td>{{ $order->user->name }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                {{ $orders->withQueryString()->links() }}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- === BREAKDOWN BY PAYMENT METHOD (Today) === --}}
-            <div>
+            {{-- ===== BREAKDOWN BY PAYMENT METHOD (Today) ===== --}}
+            <div class="row">
                 <div class="col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-wrap">
-                            <div class="d-flex justify-content-between align-items-center m-4">
-                                <h4 style="color: #3949AB; font-weight: 600">Breakdown by Payment Method (Today)</h4>
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0 text-primary">Breakdown by Payment Method (Today)</h4>
                             </div>
-                            <div class="clearfix mb-3"></div>
+
                             @if(isset($paymentBreakdownToday) && $paymentBreakdownToday->count())
-                                <table class="table-striped table">
-                                    <tr>
-                                        <th>Payment Method</th>
-                                        <th>Revenue</th>
-                                    </tr>
-                                    @foreach ($paymentBreakdownToday as $pb)
-                                        <tr>
-                                            <td>{{ $pb->payment_method ?? 'Unknown' }}</td>
-                                            <td>{{ number_format($pb->total_revenue, 0, ',', '.') }}</td>
-                                        </tr>
-                                    @endforeach
-                                </table>
+                                <div class="table-responsive">
+                                    <table class="table table-striped mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Payment Method</th>
+                                                <th>Revenue</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($paymentBreakdownToday as $pb)
+                                                <tr>
+                                                    <td>{{ $pb->payment_method ?? 'Unknown' }}</td>
+                                                    <td>{{ number_format($pb->total_revenue, 0, ',', '.') }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                             @else
-                                <div class="m-4 text-muted">Belum ada transaksi hari ini.</div>
+                                <div class="text-muted">Belum ada transaksi hari ini.</div>
                             @endif
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- === PRODUK TERJUAL HARI INI (semua user) === --}}
-            <div>
+            {{-- ===== PRODUK TERJUAL HARI INI ===== --}}
+            <div class="row">
                 <div class="col-12">
-                    <div class="card card-statistic-1">
-                        <div class="card-wrap">
-                            <div class="d-flex justify-content-between align-items-center m-4">
-                                <h4 style="color: #3949AB; font-weight: 600">Produk Terjual Hari Ini</h4>
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0 text-primary">Produk Terjual Hari Ini</h4>
                             </div>
-                            <div class="clearfix mb-3"></div>
+
                             @if(isset($productSalesToday) && $productSalesToday->count())
-                                <table class="table-striped table">
-                                    <tr>
-                                        <th>Produk</th>
-                                        <th>Jumlah</th>
-                                    </tr>
-                                    @foreach ($productSalesToday as $ps)
-                                        <tr>
-                                            <td>{{ $ps->product_name }}</td>
-                                            <td>{{ $ps->total_quantity }}</td>
-                                        </tr>
-                                    @endforeach
-                                </table>
-                                <div class="float-right mt-3">
+                                <div class="table-responsive">
+                                    <table class="table table-striped mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Produk</th>
+                                                <th>Jumlah</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($productSalesToday as $ps)
+                                                <tr>
+                                                    <td>{{ $ps->product_name }}</td>
+                                                    <td>{{ $ps->total_quantity }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-end mt-3">
                                     {{ $productSalesToday->withQueryString()->links() }}
                                 </div>
                             @else
-                                <div class="m-4 text-muted">Belum ada produk terjual hari ini.</div>
+                                <div class="text-muted">Belum ada produk terjual hari ini.</div>
                             @endif
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- === GRAFIK SALES (semua user) === --}}
-            <div>
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <h4>Grafik Sales</h4>
+            {{-- ===== GRAFIK SALES ===== --}}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h4 class="mb-0">Grafik Sales</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="card border-0">
+                                <div class="card-body">
+                                    <canvas id="grafikSalesChart"></canvas>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div class="row mb-3">
-                                    <div class="col-md-3 col-sm-6 mb-3">
-                                        <div class="card card-statistic-1">
-                                            <div class="card-icon bg-success"><i class="fas fa-money-bill-wave"></i></div>
-                                            <div class="card-wrap">
-                                                <div class="card-header"><h4>Revenue (Completed)</h4></div>
-                                                <div class="card-body">{{ number_format($monthlyCompletedRevenue ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 col-sm-6 mb-3">
-                                        <div class="card card-statistic-1">
-                                            <div class="card-icon bg-primary"><i class="fas fa-receipt"></i></div>
-                                            <div class="card-wrap">
-                                                <div class="card-header"><h4>Orders (Completed)</h4></div>
-                                                <div class="card-body">{{ number_format($monthlyCompletedOrders ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 col-sm-6 mb-3">
-                                        <div class="card card-statistic-1">
-                                            <div class="card-icon bg-info"><i class="fas fa-divide"></i></div>
-                                            <div class="card-wrap">
-                                                <div class="card-header"><h4>AOV (Completed)</h4></div>
-                                                <div class="card-body">{{ number_format($monthlyAov ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 col-sm-6 mb-3">
-                                        <div class="card card-statistic-1">
-                                            <div class="card-icon bg-warning"><i class="fas fa-credit-card"></i></div>
-                                            <div class="card-wrap">
-                                                <div class="card-header"><h4>Payment Methods</h4></div>
-                                                <div class="card-body">{{ number_format($monthlyPaymentMethods ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="card">
-                                    <div class="card-body">
-                                        <canvas id="grafikSalesChart"></canvas>
-                                    </div>
-                                </div>
-
-                            </div> {{-- card-body --}}
-                        </div> {{-- card --}}
-                    </div> {{-- col-12 --}}
-                </div> {{-- row --}}
+                        </div>
+                    </div>
+                </div>
             </div>
+
         </section>
     </div>
 
     <!-- Order Details Modal -->
     <div class="modal fade" id="orderDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Order Details</h5>
+                    <h5 class="modal-title mb-0">Order Details</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -351,7 +265,7 @@
                         </div>
                         <div class="table-responsive">
                             <table class="table table-striped">
-                                <thead>
+                                <thead class="thead-light">
                                     <tr>
                                         <th>Product</th>
                                         <th class="text-center">Price</th>
@@ -363,9 +277,11 @@
                             </table>
                         </div>
                         <div class="d-flex justify-content-end">
-                            <div class="w-50">
-                                <hr/>
-                                <div class="d-flex justify-content-between font-weight-bold"><span>Total</span><span id="odTotal"></span></div>
+                            <div class="w-100 w-md-50">
+                                <hr class="my-2"/>
+                                <div class="d-flex justify-content-between font-weight-bold">
+                                    <span>Total</span><span id="odTotal"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -379,7 +295,7 @@
 @endsection
 
 @push('scripts')
-    <!-- JS Libraies -->
+    <!-- JS Libraries -->
     <script src="{{ asset('library/simpleweather/jquery.simpleWeather.min.js') }}"></script>
     <script src="{{ asset('library/chart.js/dist/Chart.min.js') }}"></script>
     <script src="{{ asset('library/jqvmap/dist/jquery.vmap.min.js') }}"></script>
@@ -403,9 +319,9 @@
             (data.items||[]).forEach(it=>{
                 const tr=document.createElement('tr');
                 tr.innerHTML = `<td>${it.product_name||'-'}</td>
-                                <td class=\"text-center\">${formatIDR(it.price||0)}</td>
-                                <td class=\"text-center\">${it.quantity||0}</td>
-                                <td class=\"text-right\">${formatIDR(it.total_price||0)}</td>`;
+                                <td class="text-center">${formatIDR(it.price||0)}</td>
+                                <td class="text-center">${it.quantity||0}</td>
+                                <td class="text-right">${formatIDR(it.total_price||0)}</td>`;
                 tbody.appendChild(tr);
             });
             $('#orderDetailsModal').modal('show');
@@ -433,23 +349,139 @@
             }));
         }
 
+        // async function renderSalesChart(params){
+        //     const series = await loadSalesSeries(params);
+        //     const stacked = !!params.segment_by;
+        //     const ctx = document.getElementById('grafikSalesChart').getContext('2d');
+        //     if(window.salesChart) window.salesChart.destroy();
+        //     window.salesChart = new Chart(ctx, {
+        //         type: 'bar',
+        //         data: { labels: series.labels, datasets: toDatasets(series.datasets, stacked) },
+        //         options: {
+        //             responsive: true,
+        //             maintainAspectRatio: true,
+        //             scales: { xAxes: [{ stacked }], yAxes: [{ stacked, ticks: { beginAtZero: true } }] },
+        //             tooltips: { callbacks: { label: (item)=>`Rp ${Number(item.yLabel||0).toLocaleString('id-ID')}` } }
+        //         }
+        //     });
+        // }
+        // async function renderSalesChart(params){
+        //     const series = await loadSalesSeries(params);
+        //     const stacked = !!params.segment_by;
+        //     const ctx = document.getElementById('grafikSalesChart').getContext('2d');
+        //     if(window.salesChart) window.salesChart.destroy();
+        //     window.salesChart = new Chart(ctx, {
+        //         type: 'bar',
+        //         data: { labels: series.labels, datasets: toDatasets(series.datasets, stacked) },
+        //         options: {
+        //             responsive: true,
+        //             maintainAspectRatio: true,
+        //             scales: { 
+        //                 xAxes: [{ stacked }], 
+        //                 yAxes: [{ stacked, ticks: { beginAtZero: true } }] 
+        //             },
+        //             tooltips: {
+        //                 mode: 'index',       // << tampilkan semua dataset di index yg sama
+        //                 intersect: false,    // << tidak harus tepat di titik bar
+        //                 callbacks: { 
+        //                     label: (item)=>`Rp ${Number(item.yLabel||0).toLocaleString('id-ID')}` 
+        //                 }
+        //             }
+        //         }
+        //     });
+        // }
+        // async function renderSalesChart(params){
+        //     const series = await loadSalesSeries(params);
+        //     const stacked = !!params.segment_by;
+        //     const ctx = document.getElementById('grafikSalesChart').getContext('2d');
+        //     if(window.salesChart) window.salesChart.destroy();
+
+        //     window.salesChart = new Chart(ctx, {
+        //         type: 'bar',
+        //         data: { 
+        //             labels: series.labels, 
+        //             datasets: toDatasets(series.datasets, stacked) 
+        //         },
+        //         options: {
+        //             responsive: true,
+        //             maintainAspectRatio: true,
+        //             interaction: {
+        //                 mode: 'index',      // tampilkan semua dataset di index yang sama
+        //                 intersect: false
+        //             },
+        //             plugins: {
+        //                 tooltip: {
+        //                     callbacks: {
+        //                         // Teks di tooltip
+        //                         label: function(ctx){
+        //                             // label dataset = Payment Method
+        //                             let method = ctx.dataset.label || 'Metode';
+        //                             let value = ctx.parsed.y || 0;
+        //                             return `${method}: Rp ${Number(value).toLocaleString('id-ID')}`;
+        //                         },
+        //                         // Judul tooltip = label sumbu X (misal tanggal/hari)
+        //                         title: function(ctx){
+        //                             return ctx[0].label;
+        //                         }
+        //                     }
+        //                 }
+        //             },
+        //             scales: { 
+        //                 xAxes: [{ stacked }], 
+        //                 yAxes: [{ stacked, ticks: { beginAtZero: true } }] 
+        //             },
+        //         }
+        //     });
+        // }
+
         async function renderSalesChart(params){
             const series = await loadSalesSeries(params);
             const stacked = !!params.segment_by;
-            const ctx = document.getElementById('grafikSalesChart').getContext('2d');
-            if(window.salesChart) window.salesChart.destroy();
-            window.salesChart = new Chart(ctx, {
+            const canvasCtx = document.getElementById('grafikSalesChart').getContext('2d');
+
+            if (window.salesChart) window.salesChart.destroy();
+
+            window.salesChart = new Chart(canvasCtx, {
                 type: 'bar',
-                data: { labels: series.labels, datasets: toDatasets(series.datasets, stacked) },
+                data: {
+                    labels: series.labels,
+                    datasets: toDatasets(series.datasets, stacked)
+                },
                 options: {
                     responsive: true,
-                    scales: { x: { stacked: stacked }, y: { stacked: stacked, beginAtZero: true } },
-                    plugins: { tooltip: { callbacks: { label: (ctx)=>`Rp ${Number(ctx.parsed.y||0).toLocaleString('id-ID')}` } } }
+                    maintainAspectRatio: true,
+                    scales: {
+                        xAxes: [{ stacked: stacked }],
+                        yAxes: [{ stacked: stacked, ticks: { beginAtZero: true } }]
+                    },
+                    tooltips: {
+                        mode: 'index',     // tampilkan semua dataset pada index yang sama
+                        intersect: false,  // tidak harus tepat di batangnya
+                        callbacks: {
+                            // Judul tooltip (opsional): label sumbu X, mis. tanggal/hari
+                            title: function(tooltipItems, data){
+                                return tooltipItems.length ? tooltipItems[0].label : '';
+                            },
+                            // Baris per dataset
+                            label: function(tooltipItem, data){
+                                const ds = data.datasets[tooltipItem.datasetIndex] || {};
+                                const method = ds.label || 'Metode';
+                                const val = Number(tooltipItem.yLabel || 0);
+                                return `${method} : Rp ${val.toLocaleString('id-ID')}`;
+                            },
+                            // Footer (opsional): total semua payment method pada index tsb
+                            footer: function(tooltipItems, data){
+                                const idx = tooltipItems.length ? tooltipItems[0].index : -1;
+                                if (idx < 0) return '';
+                                const sum = data.datasets.reduce((acc, ds) => acc + (Number(ds.data[idx]) || 0), 0);
+                                return `Total: Rp ${sum.toLocaleString('id-ID')}`;
+                            }
+                        }
+                    }
                 }
             });
         }
 
-        // No filters on dashboard: fixed params handled below
 
         document.addEventListener('DOMContentLoaded', async function () {
             // Hook order detail links

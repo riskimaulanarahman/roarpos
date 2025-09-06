@@ -101,12 +101,12 @@
                                 <i class="fas fa-layer-group"></i> <span>Order by Category</span>
                             </a>
                         </li>
-                        <li class="{{ Request::is('report/detail*') ? 'active' : '' }}">
+                        {{-- <li class="{{ Request::is('report/detail*') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('report.detail') }}">
                                 <i class="fas fa-list"></i> <span>Order Detail</span>
                             </a>
-                        </li>
-                        <li class="{{ Request::is('summary*') ? 'active' : '' }}">
+                        </li> --}}
+                        {{-- <li class="{{ Request::is('summary*') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('summary.index') }}">
                                 <i class="fas fa-chart-pie"></i> <span>Summary</span>
                             </a>
@@ -130,7 +130,7 @@
                             <a class="nav-link" href="{{ route('report.refunds') }}">
                                 <i class="fas fa-undo"></i> <span>Refunds</span>
                             </a>
-                        </li>
+                        </li> --}}
                     </ul>
                 </li>
             @endif

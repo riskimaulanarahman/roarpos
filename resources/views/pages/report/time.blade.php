@@ -39,17 +39,7 @@
                 <input type="date" class="form-control" name="date_to" value="{{ $date_to }}">
               </div>
             </div>
-            <div class="col-md-3">
-              <div class="form-group">
-                <label>Status</label>
-                <select name="status" class="form-control">
-                  <option value="">Semua</option>
-                  @foreach($statuses as $s)
-                    <option value="{{ $s }}" {{ ($status ?? '') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
-                  @endforeach
-                </select>
-              </div>
-            </div>
+            <!-- Status filter removed; enforced to Completed -->
             <div class="col-md-3">
               <div class="form-group">
                 <label>Mode</label>
@@ -87,7 +77,7 @@
           @php($chips = [])
           @if(request('date_from')) @php($chips[] = 'Dari: '.request('date_from')) @endif
           @if(request('date_to')) @php($chips[] = 'Ke: '.request('date_to')) @endif
-          @if(request('status')) @php($chips[] = 'Status: '.ucfirst(request('status'))) @endif
+          @php($chips[] = 'Status: Completed')
           @if(request('mode')) @php($chips[] = 'Mode: '.strtoupper(request('mode'))) @endif
           @if(request('user_id'))
               @php($u = ($users ?? collect())->firstWhere('id', request('user_id')))
