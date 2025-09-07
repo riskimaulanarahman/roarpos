@@ -44,6 +44,7 @@
                                 <i class="fas fa-money-bill-wave"></i>
                             </div>
                             <div>
+                                <div>This Month</div>
                                 <div class="text-muted small">Revenue (Completed)</div>
                                 <div class="h4 mb-0">{{ number_format($monthlyCompletedRevenue ?? 0) }}</div>
                             </div>
@@ -59,6 +60,7 @@
                                 <i class="fas fa-receipt"></i>
                             </div>
                             <div>
+                                <div>This Month</div>
                                 <div class="text-muted small">Orders (Completed)</div>
                                 <div class="h4 mb-0">{{ number_format($monthlyCompletedOrders ?? 0) }}</div>
                             </div>
@@ -74,6 +76,7 @@
                                 <i class="fas fa-divide"></i>
                             </div>
                             <div>
+                                <div>This Month</div>
                                 <div class="text-muted small">AOV (Completed)</div>
                                 <div class="h4 mb-0">{{ number_format($monthlyAov ?? 0) }}</div>
                             </div>
@@ -89,6 +92,7 @@
                                 <i class="fas fa-credit-card"></i>
                             </div>
                             <div>
+                                <div>This Month</div>
                                 <div class="text-muted small">Payment Methods</div>
                                 <div class="h4 mb-0">{{ number_format($monthlyPaymentMethods ?? 0) }}</div>
                             </div>
@@ -190,7 +194,7 @@
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h4 class="mb-0 text-primary">Produk Terjual Hari Ini</h4>
+                                <h4 class="mb-0 text-primary">Products Sold Today</h4>
                             </div>
 
                             @if(isset($productSalesToday) && $productSalesToday->count())
@@ -228,7 +232,10 @@
                 <div class="col-12">
                     <div class="card shadow-sm">
                         <div class="card-header">
-                            <h4 class="mb-0">Grafik Sales</h4>
+                            {{-- <h4 class="mb-0">Grafik Sales</h4> --}}
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0 text-primary">Grafik Sales (This Month)</h4>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="card border-0">
