@@ -35,11 +35,14 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
+        $userId = auth()->id();
+
         $request->validate([
             'name' =>  'required|min:3|unique:categories,name',
         ]);
         $category = new Category();
         $category->name = $request->name;
+        $category->user_id = $userId;
         if ($request->hasFile('image')) {
             // dd($request->all());
             $filename = time() . '.' . $request->image->extension();
