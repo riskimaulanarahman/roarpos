@@ -38,7 +38,13 @@ class CategoryController extends Controller
         $userId = auth()->id();
 
         $request->validate([
-            'name' =>  'required|min:3|unique:categories,name',
+            'name' => [
+                'required',
+                'min:3',
+                Rule::unique('categories')->where(function ($query) use ($userId) {
+                    return $query->where('user_id', $userId);
+                }),
+            ],
         ]);
         $category = new Category();
         $category->name = $request->name;
