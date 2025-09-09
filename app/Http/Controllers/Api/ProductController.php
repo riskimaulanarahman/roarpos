@@ -12,6 +12,7 @@ use Throwable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\File;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -38,15 +39,21 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        // 1) VALIDASI (manual supaya bisa dilog kalau gagal)
+        $userId = auth()->id();
+
         $validator = Validator::make($request->all(), [
-            'name'        => ['required', 'string', 'min:3', 'max:255'],
+            'name'        => [
+                'required', 'string', 'min:3', 'max:255',
+                Rule::unique('products', 'name')->where(fn($q) => $q->where('user_id', $userId)),
+            ],
             'price'       => ['required', 'numeric'],
             'stock'       => ['required', 'numeric'],
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'category_id' => [
+                'required', 'integer',
+                Rule::exists('categories', 'id')->where(fn($q) => $q->where('user_id', $userId)),
+            ],
             'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
-
         // Ambil user_id dari user yang sedang login
 
         if ($validator->fails()) {
@@ -102,13 +109,25 @@ class ProductController extends Controller
 
       public function update(Request $request)
     {
-        // 1) VALIDASI (manual supaya bisa log kalau gagal)
+        $userId = auth()->id();
+
         $validator = Validator::make($request->all(), [
-            'id'          => ['required', 'integer', 'exists:products,id'],
-            'name'        => ['required', 'string', 'max:255'],
+            'id'          => [
+                'required', 'integer',
+                Rule::exists('products', 'id')->where(fn($q) => $q->where('user_id', $userId)),
+            ],
+            'name'        => [
+                'required', 'string', 'min:3', 'max:255',
+                Rule::unique('products', 'name')
+                    ->where(fn($q) => $q->where('user_id', $userId))
+                    ->ignore($request->id),
+            ],
             'price'       => ['required', 'numeric'],
             'stock'       => ['required', 'numeric'],
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'category_id' => [
+                'required', 'integer',
+                Rule::exists('categories', 'id')->where(fn($q) => $q->where('user_id', $userId)),
+            ],
             'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
 
@@ -208,7 +227,9 @@ class ProductController extends Controller
 
     public function destroy($id): JsonResponse
     {
-        $product = \App\Models\Product::findOrFail($id);
+        $userId = auth()->id();
+
+        $product = \App\Models\Product::where('user_id', $userId)->findOrFail($id);
 
         // ==== (Opsional) Cek relasi lebih dulu biar pesan user-friendly ====
         // Sesuaikan nama relasi dengan model kamu, misal: orderItems(), salesItems(), dsb.
