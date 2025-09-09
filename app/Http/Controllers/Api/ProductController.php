@@ -56,13 +56,16 @@ class ProductController extends Controller
         ]);
         // Ambil user_id dari user yang sedang login
 
-        if ($validator->fails()) {
+        // if ($validator->fails()) {
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors(),
-            ], 422);
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Validation error',
+        //         'errors'  => $validator->errors(),
+        //     ], 422);
+        // }
+        if ($validator->fails()) {
+            return response()->json($validator->errors()->first(), 422);
         }
 
         try {
@@ -131,13 +134,16 @@ class ProductController extends Controller
             'image'       => ['nullable', 'image', 'mimes:png,jpg,jpeg', 'max:2048'],
         ]);
 
-        if ($validator->fails()) {
+        // if ($validator->fails()) {
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'errors'  => $validator->errors(),
-            ], 422);
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Validation error',
+        //         'errors'  => $validator->errors(),
+        //     ], 422);
+        // }
+        if ($validator->fails()) {
+            return response()->json($validator->errors()->first(), 422);
         }
 
         try {
