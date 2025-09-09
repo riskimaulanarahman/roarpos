@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
@@ -36,13 +37,19 @@ class CategoryController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
-        ]);
-
-        // Ambil user_id dari user yang sedang login
         $userId = auth()->id();
+
+        $request->validate([
+            'name' => [
+                'required',
+                'min:3',
+                // unique per user_id
+                Rule::unique('categories', 'name')->where(function ($q) use ($userId) {
+                    return $q->where('user_id', $userId);
+                }),
+            ],
+            'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048',
+        ]);
 
         $category = new Category();
         $category->user_id = $userId;
@@ -63,13 +70,24 @@ class CategoryController extends Controller
 
     public function update(Request $request)
     {
+         $userId = auth()->id();
+
+        // pastikan hanya bisa update kategori miliknya
+        $category = Category::where('user_id', $userId)->findOrFail($request->id);
+
         $request->validate([
-            'id' => 'required',
-            'name' => 'required',
+            'id' => ['required', Rule::exists('categories', 'id')->where('user_id', $userId)],
+            'name' => [
+                'required',
+                'min:3',
+                // unique per user_id, abaikan id kategori yang sedang diupdate
+                Rule::unique('categories', 'name')
+                    ->where(fn($q) => $q->where('user_id', $userId))
+                    ->ignore($category->id),
+            ],
             'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
         ]);
-
-        $category = \App\Models\Category::findOrFail($request->id);
+        
         $category->name = $request->name;
         if ($request->hasFile('image')) {
             Storage::delete('public/categories/' . $category->image);
