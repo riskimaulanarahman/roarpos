@@ -87,7 +87,7 @@ class CategoryController extends Controller
             ],
             'image' => 'nullable|image|mimes:png,jpg,jpeg|max:2048'
         ]);
-        
+
         $category->name = $request->name;
         if ($request->hasFile('image')) {
             Storage::delete('public/categories/' . $category->image);
@@ -105,8 +105,15 @@ class CategoryController extends Controller
 
     public function destroy($id)
     {
-        $category = \App\Models\Category::findOrFail($id);
-        Storage::delete('public/categories/' . $category->image);
+        $userId = auth()->id();
+
+        // pastikan hanya bisa menghapus miliknya
+        $category = Category::where('user_id', $userId)->findOrFail($id);
+
+        if (!empty($category->image) && Storage::disk('public')->exists('categories/' . $category->image)) {
+            Storage::disk('public')->delete('categories/' . $category->image);
+        }
+        
         $category->delete();
         return response()->json([
             'success' => true,
