@@ -54,11 +54,11 @@ Route::post('/products/edit', [App\Http\Controllers\Api\ProductController::class
 Route::delete('/products/{id}', [App\Http\Controllers\Api\ProductController::class, 'destroy'])->middleware('auth:sanctum');
 
 // categories
-Route::get('/categories', [App\\Http\\Controllers\\Api\\CategoryController::class, 'index'])->middleware('auth:sanctum');
-Route::get('/categories/{id}', [App\\Http\\Controllers\\Api\\CategoryController::class, 'show'])->middleware('auth:sanctum');
-Route::post('/categories', [App\\Http\\Controllers\\Api\\CategoryController::class, 'store'])->middleware('auth:sanctum');
-Route::post('/categories/edit', [App\\Http\\Controllers\\Api\\CategoryController::class, 'update'])->middleware('auth:sanctum');
-Route::delete('/categories/{id}', [App\\Http\\Controllers\\Api\\CategoryController::class, 'destroy'])->middleware('auth:sanctum');
+Route::get('/categories', [App\Http\Controllers\Api\CategoryController::class, 'index'])->middleware('auth:sanctum');
+Route::get('/categories/{id}', [App\Http\Controllers\Api\CategoryController::class, 'show'])->middleware('auth:sanctum');
+Route::post('/categories', [App\Http\Controllers\Api\CategoryController::class, 'store'])->middleware('auth:sanctum');
+Route::post('/categories/edit', [App\Http\Controllers\Api\CategoryController::class, 'update'])->middleware('auth:sanctum');
+Route::delete('/categories/{id}', [App\Http\Controllers\Api\CategoryController::class, 'destroy'])->middleware('auth:sanctum');
 
 // Product recipe & production endpoints removed (inventory/production module disabled)
 
