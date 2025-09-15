@@ -76,6 +76,7 @@ Route::resource('user', UserController::class)->middleware('role:admin');
     Route::get('/report/filter', [ReportController::class, 'filter'])->name('filter.index');
     Route::get('/report/download', [ReportController::class, 'download'])->name('report.download');
     Route::get('/report/by-category', [ReportController::class, 'byCategory'])->name('report.byCategory');
+    Route::get('/report/by-category/items', [ReportController::class, 'categoryItems'])->name('report.byCategory.items');
     Route::get('/report/by-category/download', [ReportController::class, 'downloadByCategory'])->name('report.byCategory.download');
     Route::get('/report/detail', [ReportController::class, 'detail'])->name('report.detail');
     Route::get('/report/detail/download', [ReportController::class, 'downloadDetail'])->name('report.detail.download');

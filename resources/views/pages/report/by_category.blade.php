@@ -203,7 +203,20 @@
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $row->category_name }}</td>
-                                            <td>{{ $row->total_quantity }}</td>
+                                            <td>
+                                                <a href="#"
+                                                   class="js-cat-details"
+                                                   data-url="{{ route('report.byCategory.items', [
+                                                        'date_from' => $date_from,
+                                                        'date_to' => $date_to,
+                                                        'category_id' => $row->category_id,
+                                                        'payment_method' => $paymentMethod,
+                                                        'user_id' => $userId,
+                                                   ]) }}"
+                                                   title="Lihat detail transaksi untuk kategori ini">
+                                                    {{ $row->total_quantity }}
+                                                </a>
+                                            </td>
                                             <td>{{ number_format($row->total_price, 0, ',', '.') }}</td>
                                         </tr>
                                     @endforeach
@@ -322,6 +335,26 @@
             const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
         }
 
+        function formatIDR(n){ if(n==null) return '-'; return (n).toLocaleString('id-ID'); }
+        function renderCatModal(payload){
+            const wrap=document.getElementById('catDetailsModal'); if(!wrap) return;
+            document.getElementById('cdTitle').textContent = (payload.category_name||'Kategori') + ` — ${payload.date_from} s/d ${payload.date_to}`;
+            document.getElementById('cdTotalQty').textContent = formatIDR(payload.total_quantity||0);
+            document.getElementById('cdTotalRev').textContent = formatIDR(payload.total_revenue||0);
+            const tb = document.getElementById('cdItems'); tb.innerHTML='';
+            (payload.items||[]).forEach(it=>{
+                const tr=document.createElement('tr');
+                tr.innerHTML = `<td>${it.transaction_number || it.order_id}</td>
+                                <td>${(it.created_at||'').substring(0,19)}</td>
+                                <td>${it.product_name||'-'}</td>
+                                <td class=\"text-center\">${formatIDR(it.price||0)}</td>
+                                <td class=\"text-center\">${it.quantity||0}</td>
+                                <td class=\"text-right\">${formatIDR(it.total_price||0)}</td>`;
+                tb.appendChild(tr);
+            });
+            $('#catDetailsModal').modal('show');
+        }
+
         $(function(){
             // Initialize Select2 for category multi-select and payment method if available
             if ($.fn.select2) {
@@ -355,6 +388,53 @@
                 const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value='';
             });
             document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_by_category_filters'));
+            document.addEventListener('click', function(e){
+                const a=e.target.closest('.js-cat-details'); if(!a) return;
+                e.preventDefault(); const url=a.getAttribute('data-url'); if(!url) return;
+                fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+                    .then(r=>r.json())
+                    .then(renderCatModal)
+                    .catch(()=>alert('Gagal mengambil detail transaksi kategori'));
+            });
         });
     </script>
+    <!-- Modal for Category Details -->
+    <div class="modal fade" id="catDetailsModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cdTitle">Detail Transaksi Kategori</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex justify-content-end mb-2">
+                        <div class="text-right">
+                            <div><strong>Total Qty:</strong> <span id="cdTotalQty">0</span></div>
+                            <div><strong>Total Revenue:</strong> <span id="cdTotalRev">0</span></div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Transaksi</th>
+                                    <th>Waktu</th>
+                                    <th>Produk</th>
+                                    <th class="text-center">Harga</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-right">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cdItems"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endpush

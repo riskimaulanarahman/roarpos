@@ -253,6 +253,71 @@ class ReportController extends Controller
         ]);
     }
 
+    // AJAX: list order items for a given category within date range
+    public function categoryItems(Request $request)
+    {
+        if (!$request->ajax()) {
+            abort(404);
+        }
+        $this->validate($request, [
+            'date_from' => 'required|date',
+            'date_to' => 'required|date|after_or_equal:date_from',
+            'category_id' => 'required|integer|exists:categories,id',
+        ]);
+
+        $date_from = $request->input('date_from');
+        $date_to = $request->input('date_to');
+        $paymentMethod = $request->input('payment_method');
+        $isAdmin = auth()->user()?->roles === 'admin';
+        $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
+        $categoryId = (int) $request->input('category_id');
+
+        $rows = OrderItem::query()
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->whereBetween(DB::raw('DATE(orders.created_at)'), [$date_from, $date_to])
+            ->where('orders.status', 'completed')
+            ->when($userId, fn($q) => $q->where('orders.user_id', $userId))
+            ->when($paymentMethod, fn($q) => $q->where('orders.payment_method', $paymentMethod))
+            ->where('products.category_id', $categoryId)
+            ->orderBy('orders.created_at', 'desc')
+            ->get([
+                'orders.id as order_id',
+                'orders.transaction_number',
+                'orders.created_at',
+                'orders.payment_method',
+                'order_items.quantity',
+                'order_items.price',
+                'order_items.total_price',
+                'products.name as product_name',
+                'categories.name as category_name',
+            ]);
+
+        $payload = [
+            'category_id' => $categoryId,
+            'category_name' => optional($rows->first())->category_name,
+            'date_from' => $date_from,
+            'date_to' => $date_to,
+            'total_quantity' => (int) $rows->sum('quantity'),
+            'total_revenue' => (int) $rows->sum('total_price'),
+            'items' => $rows->map(function ($r) {
+                return [
+                    'order_id' => $r->order_id,
+                    'transaction_number' => $r->transaction_number,
+                    'created_at' => optional($r->created_at)->toDateTimeString(),
+                    'payment_method' => $r->payment_method,
+                    'product_name' => $r->product_name,
+                    'quantity' => (int) $r->quantity,
+                    'price' => (int) $r->price,
+                    'total_price' => (int) $r->total_price,
+                ];
+            })->values(),
+        ];
+
+        return response()->json($payload);
+    }
+
     public function detail(Request $request)
     {
         $this->validate($request, [
