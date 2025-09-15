@@ -252,12 +252,13 @@
         function parseCurrency(str){ if(!str) return 0; return parseInt(String(str).replace(/[^0-9\-]/g,'')) || 0; }
         let categoryChart;
         const catData = @json($chart ?? null);
-        const CAT_ITEMS_ALL_URL = @json(route('report.byCategory.items', [
+        const CAT_SELECTED = @json($categoryId ?? []);
+        const CAT_ITEMS_ALL_URL = "{{ route('report.byCategory.items', [
             'date_from' => $date_from,
             'date_to' => $date_to,
             'payment_method' => $paymentMethod,
             'user_id' => $userId,
-        ]));
+        ]) }}";
         if (catData) {
             const ctx = document.getElementById('categoryChart').getContext('2d');
             categoryChart = new Chart(ctx, {
@@ -313,7 +314,16 @@
         document.getElementById('yearSelectCat')?.addEventListener('change', recomputeRangeCat);
         document.getElementById('monthSelectCat')?.addEventListener('change', recomputeRangeCat);
         document.getElementById('weekOptionSelectCat')?.addEventListener('change', recomputeRangeCat);
-        updateVisibilityCat(); if(document.getElementById('periodSelectCat')?.value){ recomputeRangeCat(); }
+        // On first load, don’t override server-provided dates
+        updateVisibilityCat();
+        (function(){
+            const dfEl = document.querySelector('input[name="date_from"]');
+            const dtEl = document.querySelector('input[name="date_to"]');
+            const hasServerDates = !!((dfEl && dfEl.value) || (dtEl && dtEl.value));
+            if(document.getElementById('periodSelectCat')?.value && !hasServerDates){
+                recomputeRangeCat();
+            }
+        })();
 
         function savePrefs(prefix){
             const f=document.querySelector('form');
@@ -344,20 +354,50 @@
         function formatIDR(n){ if(n==null) return '-'; return (n).toLocaleString('id-ID'); }
         function renderCatModal(payload){
             const wrap=document.getElementById('catDetailsModal'); if(!wrap) return;
-            document.getElementById('cdTitle').textContent = (payload.category_name||'Kategori') + ` — ${payload.date_from} s/d ${payload.date_to}`;
+            document.getElementById('cdTitle').textContent = (payload.category_name||'Kategori') + ` — ${payload.date_from||''} s/d ${payload.date_to||''}`;
             document.getElementById('cdTotalQty').textContent = formatIDR(payload.total_quantity||0);
             document.getElementById('cdTotalRev').textContent = formatIDR(payload.total_revenue||0);
-            const tb = document.getElementById('cdItems'); tb.innerHTML='';
-            (payload.items||[]).forEach(it=>{
-                const tr=document.createElement('tr');
-                tr.innerHTML = `<td>${it.transaction_number || it.order_id}</td>
-                                <td>${(it.created_at||'').substring(0,19)}</td>
-                                <td>${it.product_name||'-'}</td>
-                                <td class=\"text-center\">${formatIDR(it.price||0)}</td>
-                                <td class=\"text-center\">${it.quantity||0}</td>
-                                <td class=\"text-right\">${formatIDR(it.total_price||0)}</td>`;
-                tb.appendChild(tr);
-            });
+
+            const rows = (payload.items||[]).map(it=>[
+                (it.transaction_number || it.order_id || ''),
+                (it.created_at||'').substring(0,19),
+                (it.product_name||'-'),
+                formatIDR(it.price||0),
+                (it.quantity||0),
+                formatIDR(it.total_price||0),
+            ]);
+
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable('#cdTable')) {
+                const dt = $('#cdTable').DataTable();
+                dt.clear();
+                dt.rows.add(rows).draw();
+            } else if ($.fn.DataTable) {
+                $('#cdTable').DataTable({
+                    data: rows,
+                    paging: true,
+                    info: true,
+                    searching: false,
+                    ordering: false,
+                    lengthChange: false,
+                });
+            } else {
+                // Fallback without DataTables
+                const tb = document.getElementById('cdItems');
+                if (tb) {
+                    tb.innerHTML='';
+                    (payload.items||[]).forEach(it=>{
+                        const tr=document.createElement('tr');
+                        tr.innerHTML = `<td>${it.transaction_number || it.order_id}</td>
+                                        <td>${(it.created_at||'').substring(0,19)}</td>
+                                        <td>${it.product_name||'-'}</td>
+                                        <td class=\"text-center\">${formatIDR(it.price||0)}</td>
+                                        <td class=\"text-center\">${it.quantity||0}</td>
+                                        <td class=\"text-right\">${formatIDR(it.total_price||0)}</td>`;
+                        tb.appendChild(tr);
+                    });
+                }
+            }
+
             $('#catDetailsModal').modal('show');
         }
 
@@ -382,22 +422,22 @@
                 categoryChart.update('none');
                 // footer totals
                 let tq=0, tr=0; dt.rows({search:'applied'}).every(function(){ const tds=$(this.node()).find('td'); tq+=parseInt($(tds.get(2)).text())||0; tr+=parseCurrency($(tds.get(3)).text()); });
-                $('#ftQtyCat').html(`<a href="#" class="js-cat-details" data-url="${CAT_ITEMS_ALL_URL}" title="Detail semua kategori">${tq.toLocaleString('id-ID')}</a>`);
+                // Show grand total as plain text (no detail click on grand total)
+                $('#ftQtyCat').text(tq.toLocaleString('id-ID'));
                 $('#ftRevCat').text(tr.toLocaleString('id-ID'));
             }
             dt.on('draw', updateChart); updateChart();
             $('#btnExportCat').on('click', ()=>exportDataTableCSV(dt,'report_category_view.csv'));
+            const BY_CAT_BASE_URL = "{{ route('report.byCategory') }}";
             $('#btnResetCat').on('click', function(){
-                const f=document.querySelector('form');
-                f.querySelector('[name="period"]').value='';
-                const pm=f.querySelector('[name="payment_method"]'); if(pm) pm.value='';
-                const cat=f.querySelector('[name="category_id[]"]'); if(cat){ Array.from(cat.options).forEach(o=>o.selected=false); }
-                const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value='';
+                try { localStorage.removeItem('report_by_category_filters'); } catch(_){ }
+                // Navigate to base page (no query params) to fully reset server-side
+                window.location.href = BY_CAT_BASE_URL;
             });
             document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_by_category_filters'));
             document.addEventListener('click', function(e){
                 const a=e.target.closest('.js-cat-details'); if(!a) return;
-                e.preventDefault(); const url=a.getAttribute('data-url'); if(!url) return;
+                e.preventDefault(); let url=a.getAttribute('data-url'); if(!url) return;
                 fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
                     .then(r=>r.json())
                     .then(renderCatModal)
@@ -423,7 +463,7 @@
                         </div>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-striped">
+                        <table id="cdTable" class="table table-striped">
                             <thead>
                                 <tr>
                                     <th>Transaksi</th>

@@ -138,17 +138,7 @@
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
-                                            <div class="form-group">
-                                                <label>Kategori</label>
-                                                @php($selCats = collect(($categoryId ?? (array) request('category_id', [])))->map(fn($v)=> (string)$v)->all())
-                                                <select name="category_id[]" class="form-control select2" multiple data-placeholder="Pilih kategori">
-                                                    @foreach(($categories ?? []) as $cat)
-                                                        <option value="{{ $cat->id }}" {{ in_array((string)$cat->id, $selCats, true) ? 'selected' : '' }}>{{ $cat->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
+                                        
                                     </div>
                                     <!-- Produk filter removed -->
 
@@ -174,11 +164,7 @@
                                     @if(request('month')) @php($chips[] = 'Bulan: '.($monthNames[(int)request('month')] ?? request('month'))) @endif
                                     @if(request('week_in_month')) @php($chips[] = 'Minggu: '.strtoupper(request('week_in_month'))) @endif
                                     @if(request('last_days')) @php($chips[] = 'Terakhir: '.request('last_days').' hari') @endif
-                                    @php($selCatIds = (array) request('category_id', ($categoryId ?? [])))
-                                    @if(!empty($selCatIds))
-                                        @php($names = ($categories ?? collect())->whereIn('id', array_map('intval',$selCatIds))->pluck('name')->all())
-                                        @if(!empty($names)) @php($chips[] = 'Kategori: '.implode(', ',$names)) @endif
-                                    @endif
+                                    
                                     @if(count($chips))
                                         <div>
                                             @foreach($chips as $chip)
@@ -247,7 +233,7 @@
                                                 <tbody>
                                                 @forelse ($orders as $order)
                                                     <tr>
-                                                        <td>
+                                                        <td data-date="{{ optional($order->created_at)->format('Y-m-d') }}">
                                                             <a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">{{ $order->transaction_time }}</a>
                                                         </td>
                                                         <td>
@@ -295,12 +281,7 @@
                                                         <input type="text" hidden name="payment_method[]" value="{{ $pmv }}">
                                                     @endforeach
                                                 </div>
-                                                <div class="col-md-1">
-                                                    @php($dlCats = (array) request()->query('category_id', []))
-                                                    @foreach($dlCats as $cid)
-                                                        <input type="text" hidden name="category_id[]" value="{{ $cid }}">
-                                                    @endforeach
-                                                </div>
+                                                
                                                 <!-- product filter removed -->
                                             </div>
 
@@ -464,19 +445,22 @@
         document.getElementById('monthSelect')?.addEventListener('change', recomputeRange);
         document.getElementById('weekOptionSelect')?.addEventListener('change', recomputeRange);
 
-        // Initialize on load
+        // Initialize on load (do not override server-provided dates)
         updateVisibility();
-        // If period preselected, compute initial range only when not custom
-        if(document.getElementById('periodSelect')?.value){
-            recomputeRange();
-        }
+        (function(){
+            const dfEl = document.querySelector('input[name="date_from"]');
+            const dtEl = document.querySelector('input[name="date_to"]');
+            const hasServerDates = !!((dfEl && dfEl.value) || (dtEl && dtEl.value));
+            if(document.getElementById('periodSelect')?.value && !hasServerDates){
+                recomputeRange();
+            }
+        })();
 
         function savePrefs(prefix){
             const f=document.querySelector('form[action*="filter"]')||document.querySelector('form'); if(!f) return;
             const data={};
             ['date_from','date_to','period','status'].forEach(n=>{ const el=f.querySelector(`[name="${n}"]`); if(el) data[n]=el.value||''; });
             const pmSel=f.querySelector('[name="payment_method[]"]'); if(pmSel){ data['payment_method'] = Array.from(pmSel.selectedOptions).map(o=>o.value); }
-            const catSel=f.querySelector('[name="category_id[]"]'); if(catSel){ data['category_id'] = Array.from(catSel.selectedOptions).map(o=>o.value); }
             localStorage.setItem(prefix, JSON.stringify(data));
         }
         function loadPrefs(prefix){
@@ -486,8 +470,6 @@
             Object.entries(data).forEach(([k,v])=>{
                 if(k==='payment_method' && Array.isArray(v)){
                     const el=document.querySelector('[name="payment_method[]"]'); if(el){ Array.from(el.options).forEach(o=>o.selected = v.includes(o.value)); }
-                } else if(k==='category_id' && Array.isArray(v)){
-                    const el=document.querySelector('[name="category_id[]"]'); if(el){ Array.from(el.options).forEach(o=>o.selected = v.includes(o.value)); }
                 } else {
                     const el=document.querySelector(`[name="${k}"]`); if(el && !el.value) el.value=v;
                 }
@@ -512,51 +494,23 @@
                     placeholder: $("[name='payment_method[]']").data('placeholder') || 'Pilih metode bayar',
                     allowClear: true
                 });
-                $('[name="category_id[]"]').select2({
-                    width: '100%',
-                    placeholder: $("[name='category_id[]']").data('placeholder') || 'Pilih kategori',
-                    allowClear: true
-                });
             }
             loadPrefs('report_order_filters');
             const table = $('#ordersTable').DataTable({ paging: true, info: true });
-            function recomputeFromTable(){
-                if(ordersChart){
-                    const revByDate = {}; const countByDate = {};
-                    table.rows({ search:'applied' }).every(function(){
-                        const $row = $(this.node()); const tds = $row.find('td');
-                        const dateText = $(tds.get(0)).text(); const dateKey = toDateKey(dateText);
-                        const totalPrice = parseCurrency($(tds.get(1)).text());
-                        revByDate[dateKey] = (revByDate[dateKey] || 0) + totalPrice;
-                        countByDate[dateKey] = (countByDate[dateKey] || 0) + 1;
-                    });
-                    const labels = Object.keys(revByDate).sort();
-                    const revenue = labels.map(l => revByDate[l]);
-                    const orders = labels.map(l => countByDate[l] || 0);
-                    ordersChart.data.labels = labels;
-                    ordersChart.data.datasets[0].data = revenue;
-                    ordersChart.data.datasets[1].data = orders;
-                    ordersChart.update('none');
-                }
-                // footer totals
-                let tot=0, items=0;
-                table.rows({search:'applied'}).every(function(){ const tds=$(this.node()).find('td');
-                    tot += parseCurrency($(tds.get(1)).text());
-                    items += parseInt($(tds.get(2)).text())||0;
-                });
-                $('#ftTotalPrice').text(tot.toLocaleString('id-ID'));
-                $('#ftTotalItem').text(items.toLocaleString('id-ID'));
+            const serverRevenue = parseInt(@json($summary['total_revenue'] ?? 0));
+            const serverItems = parseInt(@json($summary['total_items_sold'] ?? 0));
+            function syncFooterWithServer(){
+                $('#ftTotalPrice').text((serverRevenue||0).toLocaleString('id-ID'));
+                $('#ftTotalItem').text((serverItems||0).toLocaleString('id-ID'));
             }
-            table.on('draw', recomputeFromTable);
-            recomputeFromTable();
+            table.on('draw', syncFooterWithServer);
+            syncFooterWithServer();
 
             $('#btnExportOrders').on('click', ()=>exportDataTableCSV(table, 'report_orders_view.csv'));
+            const REPORT_BASE_URL = "{{ route('report.index') }}";
             $('#btnResetFilters').on('click', function(){
-                const f=document.querySelector('form[action*="filter"]')||document.querySelector('form');
-                f.querySelector('[name="period"]').value='';
-                const pms=f.querySelector('[name="payment_method[]"]'); if(pms){ Array.from(pms.options).forEach(o=>o.selected=false); }
-                const cats=f.querySelector('[name="category_id[]"]'); if(cats){ Array.from(cats.options).forEach(o=>o.selected=false); }
-                const df=f.querySelector('[name="date_from"]'); const dt=f.querySelector('[name="date_to"]'); if(df) df.value=''; if(dt) dt.value='';
+                try { localStorage.removeItem('report_order_filters'); } catch(_){ }
+                window.location.href = REPORT_BASE_URL;
             });
             document.querySelector('form')?.addEventListener('submit', ()=>savePrefs('report_order_filters'));
         });

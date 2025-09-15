@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Support\ReportDateRange;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -46,9 +47,8 @@ class ReportController extends Controller
         // Force completed status for report orders
         // Status filter (default to completed if not specified)
         $status = $request->input('status') ?: 'completed';
-        // Allow multi-select for payment methods and categories
+        // Allow multi-select for payment methods (category filter removed)
         $paymentMethod = array_values(array_filter((array)$request->input('payment_method', [])));
-        $categoryId = array_values(array_filter((array)$request->input('category_id', [])));
         // Product filter removed for this page
         $productId = null;
         $isAdmin = auth()->user()?->roles === 'admin';
@@ -59,9 +59,9 @@ class ReportController extends Controller
         $lastDays = $request->input('last_days');
 
         // Base query for reuse
+        // Use DATE(created_at) consistently across queries to avoid timezone mismatch.
         $baseQuery = Order::query()
-            ->whereDate('created_at', '>=', $date_from)
-            ->whereDate('created_at', '<=', $date_to)
+            ->whereBetween(DB::raw('DATE(created_at)'), [$date_from, $date_to])
             ->when($userId, fn($q) => $q->where('user_id', $userId))
             ->when($status, function($q) use ($status){
                 if (is_array($status)) { $q->whereIn('status', $status); }
@@ -69,15 +69,6 @@ class ReportController extends Controller
             })
             ->when($paymentMethod, function($q) use ($paymentMethod){
                 if (!empty($paymentMethod)) { $q->whereIn('payment_method', $paymentMethod); }
-            })
-            ->when($categoryId, function ($q) use ($categoryId) {
-                $q->whereExists(function ($sub) use ($categoryId) {
-                    $sub->select(DB::raw(1))
-                        ->from('order_items')
-                        ->join('products', 'order_items.product_id', '=', 'products.id')
-                        ->whereColumn('order_items.order_id', 'orders.id')
-                        ->when(!empty($categoryId), function($qq) use ($categoryId){ $qq->whereIn('products.category_id', $categoryId); });
-                });
             })
             ;
 
@@ -102,7 +93,6 @@ class ReportController extends Controller
                 else { $q->where('orders.status', $status); }
             })
             ->when(!empty($paymentMethod), fn($q) => $q->whereIn('orders.payment_method', $paymentMethod))
-            ->when(!empty($categoryId), fn($q) => $q->join('products','order_items.product_id','=','products.id')->whereIn('products.category_id', $categoryId))
             ->when($userId, fn($q) => $q->where('orders.user_id', $userId))
             ->sum('order_items.quantity');
 
@@ -128,8 +118,9 @@ class ReportController extends Controller
             $selectExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m') as bucket");
             $groupExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m')");
         } elseif ($period === 'tahunan') {
-            $selectExpr = DB::raw('YEAR(created_at) as bucket');
-            $groupExpr = DB::raw('YEAR(created_at)');
+            // Show monthly buckets across the selected year
+            $selectExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m') as bucket");
+            $groupExpr = DB::raw("DATE_FORMAT(created_at, '%Y-%m')");
         }
 
         $timeseriesRows = (clone $baseQuery)
@@ -142,22 +133,50 @@ class ReportController extends Controller
             ->orderBy('bucket')
             ->get();
 
-        $labels = $timeseriesRows->pluck('bucket')->map(function ($b) use ($period) {
-            if ($period === 'mingguan') {
-                $str = (string)$b; $year = substr($str, 0, 4); $week = substr($str, -2);
-                return $year . ' W' . $week;
+        // Build labels and ensure continuity across the selected range
+        if ($period === 'harian' || !$period) {
+            $by = $timeseriesRows->keyBy(fn($r) => Carbon::parse($r->bucket)->format('Y-m-d'));
+            $periodDays = CarbonPeriod::create($date_from, $date_to);
+            $labels = collect();
+            $revenue = collect();
+            $ordersC = collect();
+            foreach ($periodDays as $d) {
+                $key = $d->format('Y-m-d');
+                $labels->push($key);
+                $revenue->push((int) ($by->get($key)->revenue ?? 0));
+                $ordersC->push((int) ($by->get($key)->orders_count ?? 0));
             }
-            return (string)$b;
-        });
-
-        if (!$period || $period === 'harian') {
-            $labels = $labels->map(fn($d) => Carbon::parse($d)->format('Y-m-d'));
+        } elseif ($period === 'tahunan') {
+            // Fill all months within selected year range (date_from..date_to)
+            $by = $timeseriesRows->keyBy(fn($r) => (string)$r->bucket); // 'Y-m'
+            $start = Carbon::parse($date_from)->startOfYear();
+            $end = Carbon::parse($date_to)->endOfYear();
+            $months = CarbonPeriod::create($start->format('Y-m-01'), '1 month', $end->format('Y-m-01'));
+            $labels = collect();
+            $revenue = collect();
+            $ordersC = collect();
+            foreach ($months as $m) {
+                $key = $m->format('Y-m');
+                $labels->push($key);
+                $revenue->push((int) ($by->get($key)->revenue ?? 0));
+                $ordersC->push((int) ($by->get($key)->orders_count ?? 0));
+            }
+        } else {
+            $labels = $timeseriesRows->pluck('bucket')->map(function ($b) use ($period) {
+                if ($period === 'mingguan') {
+                    $str = (string)$b; $year = substr($str, 0, 4); $week = substr($str, -2);
+                    return $year . ' W' . $week;
+                }
+                return (string)$b;
+            });
+            $revenue = $timeseriesRows->pluck('revenue');
+            $ordersC = $timeseriesRows->pluck('orders_count');
         }
 
         $chart = [
             'labels' => $labels,
-            'revenue' => $timeseriesRows->pluck('revenue'),
-            'orders' => $timeseriesRows->pluck('orders_count'),
+            'revenue' => $revenue,
+            'orders' => $ordersC,
         ];
 
         $categories = Category::where('user_id', $userId)->orderBy('name')->get(['id','name']);
@@ -168,7 +187,7 @@ class ReportController extends Controller
             ? User::orderBy('name')->get(['id','name'])
             : User::where('id', $userId)->get(['id','name']);
 
-        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','paymentMethods','statuses','status','paymentMethod','categoryId','period','year','month','weekInMonth','lastDays','userId','users'));
+        return view('pages.report.index', compact('orders', 'summary', 'chart', 'date_from', 'date_to', 'categories','paymentMethods','statuses','status','paymentMethod','period','year','month','weekInMonth','lastDays','userId','users'));
     }
 
     public function byCategory(Request $request)
@@ -200,6 +219,7 @@ class ReportController extends Controller
 
         if ($date_from && $date_to) {
             $base = OrderItem::select([
+                    'categories.id as category_id',
                     'categories.name as category_name',
                     DB::raw('SUM(order_items.quantity) as total_quantity'),
                     DB::raw('SUM(order_items.total_price) as total_price')
@@ -214,7 +234,7 @@ class ReportController extends Controller
                 ->when(!empty($categoryIds), function ($q) use ($categoryIds) {
                     $q->whereIn('products.category_id', $categoryIds);
                 })
-                ->groupBy('categories.name')
+                ->groupBy('categories.id','categories.name')
                 ->orderByDesc('total_price');
 
             $categorySales = $base->get();
@@ -260,7 +280,6 @@ class ReportController extends Controller
         $this->validate($request, [
             'date_from' => 'required|date',
             'date_to' => 'required|date|after_or_equal:date_from',
-            'category_id' => 'sometimes|integer|exists:categories,id',
         ]);
 
         $date_from = $request->input('date_from');
@@ -268,7 +287,14 @@ class ReportController extends Controller
         $paymentMethod = $request->input('payment_method');
         $isAdmin = auth()->user()?->roles === 'admin';
         $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
-        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
+        // Accept either scalar category_id or array (category_id[])
+        $rawCat = $request->query('category_id');
+        $categoryIds = [];
+        if (is_array($rawCat)) {
+            $categoryIds = array_values(array_filter(array_map('intval', $rawCat)));
+        } elseif (!is_null($rawCat) && $rawCat !== '') {
+            $categoryIds = [(int) $rawCat];
+        }
 
         $rows = OrderItem::query()
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
@@ -278,7 +304,7 @@ class ReportController extends Controller
             ->where('orders.status', 'completed')
             ->when($userId, fn($q) => $q->where('orders.user_id', $userId))
             ->when($paymentMethod, fn($q) => $q->where('orders.payment_method', $paymentMethod))
-            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->when(!empty($categoryIds), fn($q) => $q->whereIn('products.category_id', $categoryIds))
             ->orderBy('orders.created_at', 'desc')
             ->get([
                 'orders.id as order_id',
@@ -286,15 +312,20 @@ class ReportController extends Controller
                 'orders.created_at',
                 'orders.payment_method',
                 'order_items.quantity',
-                'order_items.price',
                 'order_items.total_price',
+                DB::raw('ROUND(order_items.total_price / NULLIF(order_items.quantity, 0)) as unit_price'),
                 'products.name as product_name',
                 'categories.name as category_name',
             ]);
 
+        $categoryName = 'Semua Kategori';
+        if (count($categoryIds) === 1) {
+            $categoryName = optional($rows->first())->category_name ?? \App\Models\Category::find($categoryIds[0])?->name ?? 'Kategori';
+        }
+
         $payload = [
-            'category_id' => $categoryId,
-            'category_name' => $categoryId ? optional($rows->first())->category_name : 'Semua Kategori',
+            'category_id' => (count($categoryIds) === 1) ? $categoryIds[0] : null,
+            'category_name' => $categoryName,
             'date_from' => $date_from,
             'date_to' => $date_to,
             'total_quantity' => (int) $rows->sum('quantity'),
@@ -307,7 +338,7 @@ class ReportController extends Controller
                     'payment_method' => $r->payment_method,
                     'product_name' => $r->product_name,
                     'quantity' => (int) $r->quantity,
-                    'price' => (int) $r->price,
+                    'price' => (int) ($r->unit_price ?? 0),
                     'total_price' => (int) $r->total_price,
                 ];
             })->values(),
