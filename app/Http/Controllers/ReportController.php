@@ -256,13 +256,11 @@ class ReportController extends Controller
     // AJAX: list order items for a given category within date range
     public function categoryItems(Request $request)
     {
-        if (!$request->ajax()) {
-            abort(404);
-        }
+        if (!$request->ajax()) { abort(404); }
         $this->validate($request, [
             'date_from' => 'required|date',
             'date_to' => 'required|date|after_or_equal:date_from',
-            'category_id' => 'required|integer|exists:categories,id',
+            'category_id' => 'sometimes|integer|exists:categories,id',
         ]);
 
         $date_from = $request->input('date_from');
@@ -270,7 +268,7 @@ class ReportController extends Controller
         $paymentMethod = $request->input('payment_method');
         $isAdmin = auth()->user()?->roles === 'admin';
         $userId = $isAdmin ? ($request->input('user_id') ?: auth()->id()) : auth()->id();
-        $categoryId = (int) $request->input('category_id');
+        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
 
         $rows = OrderItem::query()
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
@@ -280,7 +278,7 @@ class ReportController extends Controller
             ->where('orders.status', 'completed')
             ->when($userId, fn($q) => $q->where('orders.user_id', $userId))
             ->when($paymentMethod, fn($q) => $q->where('orders.payment_method', $paymentMethod))
-            ->where('products.category_id', $categoryId)
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
             ->orderBy('orders.created_at', 'desc')
             ->get([
                 'orders.id as order_id',
@@ -296,7 +294,7 @@ class ReportController extends Controller
 
         $payload = [
             'category_id' => $categoryId,
-            'category_name' => optional($rows->first())->category_name,
+            'category_name' => $categoryId ? optional($rows->first())->category_name : 'Semua Kategori',
             'date_from' => $date_from,
             'date_to' => $date_to,
             'total_quantity' => (int) $rows->sum('quantity'),
@@ -305,7 +303,7 @@ class ReportController extends Controller
                 return [
                     'order_id' => $r->order_id,
                     'transaction_number' => $r->transaction_number,
-                    'created_at' => optional($r->created_at)->toDateTimeString(),
+                    'created_at' => (string) $r->created_at,
                     'payment_method' => $r->payment_method,
                     'product_name' => $r->product_name,
                     'quantity' => (int) $r->quantity,

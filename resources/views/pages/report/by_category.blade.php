@@ -252,6 +252,12 @@
         function parseCurrency(str){ if(!str) return 0; return parseInt(String(str).replace(/[^0-9\-]/g,'')) || 0; }
         let categoryChart;
         const catData = @json($chart ?? null);
+        const CAT_ITEMS_ALL_URL = @json(route('report.byCategory.items', [
+            'date_from' => $date_from,
+            'date_to' => $date_to,
+            'payment_method' => $paymentMethod,
+            'user_id' => $userId,
+        ]));
         if (catData) {
             const ctx = document.getElementById('categoryChart').getContext('2d');
             categoryChart = new Chart(ctx, {
@@ -376,7 +382,8 @@
                 categoryChart.update('none');
                 // footer totals
                 let tq=0, tr=0; dt.rows({search:'applied'}).every(function(){ const tds=$(this.node()).find('td'); tq+=parseInt($(tds.get(2)).text())||0; tr+=parseCurrency($(tds.get(3)).text()); });
-                $('#ftQtyCat').text(tq.toLocaleString('id-ID')); $('#ftRevCat').text(tr.toLocaleString('id-ID'));
+                $('#ftQtyCat').html(`<a href="#" class="js-cat-details" data-url="${CAT_ITEMS_ALL_URL}" title="Detail semua kategori">${tq.toLocaleString('id-ID')}</a>`);
+                $('#ftRevCat').text(tr.toLocaleString('id-ID'));
             }
             dt.on('draw', updateChart); updateChart();
             $('#btnExportCat').on('click', ()=>exportDataTableCSV(dt,'report_category_view.csv'));
