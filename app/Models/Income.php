@@ -10,7 +10,7 @@ class Income extends Model
     use HasFactory, \App\Models\Traits\Blameable;
 
     protected $fillable = [
-        'date', 'reference_no', 'amount', 'category_id', 'notes', 'created_by', 'updated_by'
+        'date', 'reference_no', 'amount', 'category_id', 'notes', 'attachment_path', 'created_by', 'updated_by'
     ];
 
     protected $casts = [

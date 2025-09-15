@@ -51,20 +51,26 @@
                                         <th>Kategori</th>
                                         <th>Jumlah</th>
                                         <th>Catatan</th>
+                                        <th>Lampiran</th>
                                         <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach ($incomes as $income)
                                         <tr>
-                                            <td>{{ $income->date }}</td>
+                                            <td>{{ optional($income->date)->toDateString() }}</td>
                                             <td>{{ $income->reference_no }}</td>
                                             <td>{{ optional($income->category)->name }}</td>
                                             <td>{{ number_format($income->amount,2) }}</td>
                                             <td>{{ $income->notes }}</td>
+                                            <td>
+                                                @if($income->attachment_path)
+                                                    <a href="{{ Storage::url($income->attachment_path) }}" target="_blank">Lihat</a>
+                                                @endif
+                                            </td>
                                             <td class="text-right">
                                                 <a href="{{ route('income.edit', $income->id) }}" class="btn btn-sm btn-info">Edit</a>
-                                                <form action="{{ route('income.destroy', $income->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus data?')">
+                                                <form action="{{ route('income.destroy', $income->id) }}" method="POST" class="d-inline js-delete-income">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button class="btn btn-sm btn-danger">Hapus</button>
@@ -87,4 +93,26 @@
 
 @push('scripts')
     <script src="{{ asset('library/selectric/public/jquery.selectric.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.js-delete-income').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          Swal.fire({
+            title: 'Hapus data?',
+            text: 'Tindakan ini tidak dapat dibatalkan.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, hapus',
+            cancelButtonText: 'Batal'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              form.submit();
+            }
+          });
+        });
+      });
+    });
+    </script>
 @endpush

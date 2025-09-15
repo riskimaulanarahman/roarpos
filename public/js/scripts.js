@@ -1,7 +1,8 @@
 "use strict";
 
 // ChartJS
-if(window.Chart) {
+// Guard for Chart.js v2 API (defaults.global). Newer v3/v4 do not have `defaults.global`.
+if (window.Chart && Chart.defaults && Chart.defaults.global) {
   Chart.defaults.global.defaultFontFamily = "'Nunito', 'Segoe UI', 'Arial'";
   Chart.defaults.global.defaultFontSize = 12;
   Chart.defaults.global.defaultFontStyle = 500;

@@ -70,6 +70,7 @@ Route::get('/orders/date', [App\Http\Controllers\Api\OrderController::class, 'in
 Route::get('/orders', [App\Http\Controllers\Api\OrderController::class, 'getAllOrder'])->middleware('auth:sanctum');
 Route::post('orders/{id}/refund', [App\Http\Controllers\Api\OrderController::class, 'refund'])->middleware('auth:sanctum');
 
+/* Disabled finance API routes — web-only module
 // Finance: incomes & expenses (with categories)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/incomes', [App\Http\Controllers\Api\IncomeController::class, 'index']);
@@ -94,6 +95,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/expense-categories/{expense_category}', [App\Http\Controllers\Api\ExpenseCategoryController::class, 'update']);
     Route::delete('/expense-categories/{expense_category}', [App\Http\Controllers\Api\ExpenseCategoryController::class, 'destroy']);
 });
+*/
 
 // Raw materials & inventory endpoints removed (inventory module disabled)
 

@@ -10,7 +10,7 @@ class Expense extends Model
     use HasFactory, \App\Models\Traits\Blameable;
 
     protected $fillable = [
-        'date', 'reference_no', 'amount', 'category_id', 'vendor', 'notes', 'created_by', 'updated_by'
+        'date', 'reference_no', 'amount', 'category_id', 'vendor', 'notes', 'attachment_path', 'created_by', 'updated_by'
     ];
 
     protected $casts = [
@@ -33,4 +33,3 @@ class Expense extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 }
-

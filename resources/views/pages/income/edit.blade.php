@@ -12,13 +12,13 @@
             <div class="row">
                 <div class="col-12 col-md-6">
                     <div class="card">
-                        <form action="{{ route('income.update', $income->id) }}" method="POST">
+                        <form action="{{ route('income.update', $income->id) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
                             <div class="card-body">
                                 <div class="form-group">
                                     <label>Tanggal</label>
-                                    <input type="date" name="date" value="{{ $income->date }}" class="form-control" required>
+                                    <input type="date" name="date" value="{{ old('date', optional($income->date)->toDateString()) }}" class="form-control" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Kategori</label>
@@ -36,6 +36,15 @@
                                 <div class="form-group">
                                     <label>Catatan</label>
                                     <textarea name="notes" class="form-control">{{ $income->notes }}</textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Lampiran (JPG, PNG, PDF, maks 5MB)</label>
+                                    @if($income->attachment_path)
+                                        <div class="mb-2">
+                                            <a href="{{ Storage::url($income->attachment_path) }}" target="_blank" class="btn btn-sm btn-outline-secondary">Lihat lampiran saat ini</a>
+                                        </div>
+                                    @endif
+                                    <input type="file" name="attachment" class="form-control-file" accept="image/*,.pdf">
                                 </div>
                             </div>
                             <div class="card-footer text-right">

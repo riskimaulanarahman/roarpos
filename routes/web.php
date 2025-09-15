@@ -57,8 +57,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Admin-only web modules
 Route::middleware('role:admin')->group(function () {
-        // Expenses (Uang Keluar)
-        Route::resource('expenses', \App\Http\Controllers\ExpenseWebController::class)->except(['show']);
         // Inventory/production, employees, and attendance modules have been removed
     });
     Route::get('home/filter', [DashboardController::class, 'filter'])->name('dashboard_grafik.filter');
@@ -96,7 +94,10 @@ Route::resource('user', UserController::class)->middleware('role:admin');
     Route::get('/product_sales/download', [\App\Http\Controllers\ProductSalesController::class,'download'])->name('productSales.download');
 
     // Route::get('/finance-masuk', [\App\Http\Controllers\FinanceController::class, 'index'])->name('finance.masuk');
+    // Income & Expenses are available to authenticated users (web-only module)
     Route::resource('income', \App\Http\Controllers\IncomeController::class);
+    Route::resource('expenses', \App\Http\Controllers\ExpenseWebController::class)->except(['show']);
+    Route::post('expenses/{expense}/duplicate', [\App\Http\Controllers\ExpenseWebController::class, 'duplicate'])->name('expenses.duplicate');
     // Route::resource('finance-keluar', \\App\\Http\\Controllers\\FinanceController::class);
     // Route::get('/finance-keluar', [\\App\\Http\\Controllers\\FinanceController::class, 'index'])->name('finance.keluar');
 

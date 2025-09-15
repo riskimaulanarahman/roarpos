@@ -41,7 +41,10 @@ class ProductController extends Controller
 
     public function create()
     {
-        $categories = \App\Models\Category::orderBy('name')->get();
+        $userId = auth()->id();
+        $categories = \App\Models\Category::where('user_id', $userId)
+            ->orderBy('name', 'asc')
+            ->get();
         return view('pages.products.create', compact('categories'));
     }
 
@@ -177,7 +180,10 @@ class ProductController extends Controller
     public function edit($id)
     {
         $product = \App\Models\Product::findOrFail($id);
-        $categories = \App\Models\Category::orderBy('name')->get();
+        $userId = auth()->id();
+        $categories = \App\Models\Category::where('user_id', $userId)
+            ->orderBy('name', 'asc')
+            ->get();
         return view('pages.products.edit', compact('product', 'categories'));
     }
 

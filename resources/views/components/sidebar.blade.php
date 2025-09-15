@@ -25,7 +25,7 @@
                     </a>
                 </li>
 
-
+{{-- 
                 <li class="nav-item dropdown {{ (Request::is('income*') || Request::is('expenses*')) ? 'active' : '' }}">
                     <a href="#" class="nav-link has-dropdown">
                         <i class="fas fa-dollar"></i><span>Finance</span>
@@ -42,7 +42,7 @@
                             </a>
                         </li>
                     </ul>
-                </li>
+                </li> --}}
 
                 {{-- Inventory module removed --}}
 
@@ -66,6 +66,23 @@
 
             {{-- ====== USER ONLY (menu lainnya) ====== --}}
             @if(Auth::check() && Auth::user()->roles === 'user')
+                <li class="nav-item dropdown {{ (Request::is('income*') || Request::is('expenses*')) ? 'active' : '' }}">
+                    <a href="#" class="nav-link has-dropdown">
+                        <i class="fas fa-dollar"></i><span>Finance</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="{{ Request::is('income*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('income.index') }}">
+                                <i class="fas fa-arrow-down"></i> <span>Uang Masuk</span>
+                            </a>
+                        </li>
+                        <li class="{{ Request::is('expenses*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('expenses.index') }}">
+                                <i class="fas fa-arrow-up"></i> <span>Uang Keluar</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
                 <li class="{{ Request::is('product') || Request::is('product/*') ? 'active' : '' }}">
                     <a class="nav-link" href="{{ route('product.index') }}">
                         <i class="fas fa-shopping-bag"></i> <span>Products</span>

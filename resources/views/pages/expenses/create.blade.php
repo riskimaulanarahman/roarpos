@@ -12,12 +12,12 @@
             <div class="row">
                 <div class="col-12 col-md-6">
                     <div class="card">
-                        <form action="{{ route('expenses.store') }}" method="POST">
+                        <form action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="card-body">
                                 <div class="form-group">
                                     <label>Tanggal</label>
-                                    <input type="date" name="date" class="form-control" required>
+                                    <input type="date" name="date" class="form-control" value="{{ old('date') }}" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Kategori</label>
@@ -30,7 +30,14 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Vendor</label>
-                                    <input type="text" name="vendor" class="form-control">
+                                    <input type="text" name="vendor" class="form-control" list="vendor-suggestions">
+                                    @if(isset($vendorSuggestions) && count($vendorSuggestions))
+                                        <datalist id="vendor-suggestions">
+                                            @foreach($vendorSuggestions as $v)
+                                                <option value="{{ $v }}">
+                                            @endforeach
+                                        </datalist>
+                                    @endif
                                 </div>
                                 <div class="form-group">
                                     <label>Jumlah</label>
@@ -39,6 +46,10 @@
                                 <div class="form-group">
                                     <label>Catatan</label>
                                     <textarea name="notes" class="form-control"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Lampiran (JPG, PNG, PDF, maks 5MB)</label>
+                                    <input type="file" name="attachment" class="form-control-file" accept="image/*,.pdf">
                                 </div>
                             </div>
                             <div class="card-footer text-right">
@@ -52,4 +63,3 @@
     </section>
 </div>
 @endsection
-

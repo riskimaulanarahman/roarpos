@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Income;
 use App\Models\IncomeCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Carbon;
 
 class IncomeController extends Controller
 {
@@ -13,7 +15,9 @@ class IncomeController extends Controller
      */
     public function index(Request $request)
     {
-        $q = Income::with('category')->orderByDesc('date');
+        $q = Income::with('category')
+            ->where('created_by', auth()->id())
+            ->orderByDesc('date');
         if ($request->filled('date_from')) {
             $q->whereDate('date', '>=', $request->input('date_from'));
         }
@@ -41,9 +45,14 @@ class IncomeController extends Controller
             'date' => ['required','date'],
             'amount' => ['required','numeric','min:0.01'],
             'category_id' => ['nullable','exists:income_categories,id'],
-            'notes' => ['nullable','string']
+            'notes' => ['nullable','string','max:1000'],
+            'attachment' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:5120']
         ]);
-        $data['reference_no'] = 'INC-'.now()->format('Ymd').'-'.str_pad((string)(Income::whereDate('date', $data['date'])->count()+1), 4, '0', STR_PAD_LEFT);
+        $data['reference_no'] = $this->generateIncomeRef($data['date']);
+        if ($request->hasFile('attachment')) {
+            $path = $request->file('attachment')->store('public/income_attachments');
+            $data['attachment_path'] = $path;
+        }
         Income::create($data);
 
         return redirect()->route('income.index')->with('success', 'Data berhasil ditambahkan!');
@@ -51,19 +60,32 @@ class IncomeController extends Controller
 
     public function edit(Income $income)
     {
+        if (auth()->user()->roles !== 'admin' && $income->created_by !== auth()->id()) {
+            abort(403);
+        }
         $categories = IncomeCategory::orderBy('name')->get();
         return view('pages.income.edit', compact('income','categories'));
     }
 
     public function update(Request $request, Income $income)
     {
+        if (auth()->user()->roles !== 'admin' && $income->created_by !== auth()->id()) {
+            abort(403);
+        }
         $data = $request->validate([
             'date' => ['required','date'],
             'amount' => ['required','numeric','min:0.01'],
             'category_id' => ['nullable','exists:income_categories,id'],
-            'notes' => ['nullable','string']
+            'notes' => ['nullable','string','max:1000'],
+            'attachment' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:5120']
         ]);
-
+        if ($request->hasFile('attachment')) {
+            if ($income->attachment_path) {
+                Storage::delete($income->attachment_path);
+            }
+            $path = $request->file('attachment')->store('public/income_attachments');
+            $data['attachment_path'] = $path;
+        }
         $income->update($data);
 
         return redirect()->route('income.index')->with('success', 'Data berhasil diperbarui!');
@@ -71,7 +93,32 @@ class IncomeController extends Controller
 
     public function destroy(Income $income)
     {
+        if (auth()->user()->roles !== 'admin' && $income->created_by !== auth()->id()) {
+            abort(403);
+        }
+        if ($income->attachment_path) {
+            Storage::delete($income->attachment_path);
+        }
         $income->delete();
         return redirect()->route('income.index')->with('success', 'Data berhasil dihapus!');
+    }
+
+    private function generateIncomeRef($date): string
+    {
+        $ymd = Carbon::parse($date)->format('Ymd');
+        $prefix = 'INC-' . $ymd . '-';
+        $last = Income::where('reference_no', 'like', $prefix . '%')
+            ->orderBy('reference_no', 'desc')
+            ->value('reference_no');
+        $n = 1;
+        if ($last) {
+            $n = (int) substr($last, -4) + 1;
+        }
+        $ref = $prefix . str_pad((string) $n, 4, '0', STR_PAD_LEFT);
+        while (Income::where('reference_no', $ref)->exists()) {
+            $n++;
+            $ref = $prefix . str_pad((string) $n, 4, '0', STR_PAD_LEFT);
+        }
+        return $ref;
     }
 }
