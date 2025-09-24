@@ -31,9 +31,16 @@ class Handler extends ExceptionHandler
     public function render($request, Throwable $exception)
     {
         if ($exception instanceof \Illuminate\Validation\ValidationException) {
-            return response()->json(
-                $exception->validator->errors()->first(), 422
-            );
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => $exception->getMessage() ?: 'The given data was invalid.',
+                    'errors' => $exception->errors(),
+                ], $exception->status);
+            }
+
+            return redirect()->back()
+                ->withInput($request->input())
+                ->withErrors($exception->errors(), $exception->errorBag);
         }
 
         return parent::render($request, $exception);

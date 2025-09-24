@@ -44,7 +44,24 @@
                     </ul>
                 </li> --}}
 
-                {{-- Inventory module removed --}}
+                @php($invOpen = Request::is('raw-materials*') || Request::is('products/*/recipe*') || Request::is('products/*/produce*'))
+                <li class="nav-item dropdown {{ $invOpen ? 'active' : '' }}">
+                    <a href="#" class="nav-link has-dropdown {{ $invOpen ? 'active' : '' }}">
+                        <i class="fas fa-boxes-stacked"></i><span>Inventory</span>
+                    </a>
+                    <ul class="dropdown-menu {{ $invOpen ? 'show' : '' }}" style="{{ $invOpen ? 'display:block;' : '' }}">
+                        <li class="{{ Request::is('raw-materials*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('raw-materials.index') }}">
+                                <i class="fas fa-flask"></i> <span>Bahan Baku</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link" href="{{ route('product.index') }}">
+                                <i class="fas fa-utensils"></i> <span>Resep Produk</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
 
                 <li class="{{ (Request::is('product') || Request::is('product/*')) ? 'active' : '' }}">
                     <a class="nav-link" href="{{ route('product.index') }}">
@@ -99,6 +116,25 @@
                     <a class="nav-link" href="{{ route('order.index') }}">
                         <i class="fas fa-truck-fast"></i> <span>Orders</span>
                     </a>
+                </li>
+
+                @php($invOpen = Request::is('raw-materials*') || Request::is('products/*/recipe*') || Request::is('products/*/produce*'))
+                <li class="nav-item dropdown {{ $invOpen ? 'active' : '' }}">
+                    <a href="#" class="nav-link has-dropdown {{ $invOpen ? 'active' : '' }}">
+                        <i class="fas fa-boxes-stacked"></i><span>Inventory</span>
+                    </a>
+                    <ul class="dropdown-menu {{ $invOpen ? 'show' : '' }}" style="{{ $invOpen ? 'display:block;' : '' }}">
+                        <li class="{{ Request::is('raw-materials*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('raw-materials.index') }}">
+                                <i class="fas fa-flask"></i> <span>Bahan Baku</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-link" href="{{ route('product.index') }}">
+                                <i class="fas fa-utensils"></i> <span>Resep Produk</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 {{-- Reports dropdown untuk user --}}

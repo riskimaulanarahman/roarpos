@@ -12,6 +12,8 @@ use App\Models\RawMaterial;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Http\Requests\RawMaterialPurchaseRequest;
+use App\Http\Requests\RawMaterialOpnameRequest;
 
 class RawMaterialController extends Controller
 {
@@ -72,5 +74,63 @@ class RawMaterialController extends Controller
         $movements = $material->movements()->orderBy('occurred_at','desc')->paginate(30);
         return RawMaterialMovementResource::collection($movements);
     }
-}
 
+    public function purchase(RawMaterialPurchaseRequest $request, int $id)
+    {
+        Gate::authorize('inventory.manage');
+        $material = RawMaterial::findOrFail($id);
+        $data = $request->validated();
+        $movement = $this->inventory->adjustStock(
+            $material,
+            (float)$data['qty'],
+            'purchase',
+            (float)$data['unit_cost'],
+            'purchase',
+            $material->id,
+            $data['notes'] ?? null,
+            $request->date('occurred_at')
+        );
+        return (new RawMaterialMovementResource($movement))
+            ->additional(['message' => 'Stock purchased']);
+    }
+
+    public function stockOut(RawMaterialAdjustStockRequest $request, int $id)
+    {
+        Gate::authorize('inventory.manage');
+        $material = RawMaterial::findOrFail($id);
+        $qty = abs((float)$request->input('qty_change'));
+        $movement = $this->inventory->adjustStock(
+            $material,
+            -1 * $qty,
+            'adjustment',
+            $request->input('unit_cost'),
+            'waste',
+            $material->id,
+            $request->input('notes')
+        );
+        return (new RawMaterialMovementResource($movement))
+            ->additional(['message' => 'Stock decremented']);
+    }
+
+    public function opname(RawMaterialOpnameRequest $request, int $id)
+    {
+        Gate::authorize('inventory.manage');
+        $material = RawMaterial::findOrFail($id);
+        $counted = (float) $request->input('counted_qty');
+        $delta = $counted - (float)$material->stock_qty;
+        if (abs($delta) < 1e-9) {
+            return response()->json(['message' => 'No adjustment needed', 'data' => null]);
+        }
+        $movement = $this->inventory->adjustStock(
+            $material,
+            $delta,
+            'adjustment',
+            $material->unit_cost,
+            'stock_opname',
+            $material->id,
+            $request->input('notes') ?? 'Stock opname'
+        );
+        return (new RawMaterialMovementResource($movement))
+            ->additional(['message' => 'Opname adjusted']);
+    }
+}

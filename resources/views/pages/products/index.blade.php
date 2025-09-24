@@ -76,6 +76,7 @@
                                             <th>Name</th>
                                             <th>Category</th>
                                             <th>Price</th>
+                                            <th>HPP</th>
                                             <th>Photo</th>
                                             <th>Created At</th>
                                             <th>Action</th>
@@ -88,6 +89,14 @@
                                                 <td>{{ $product->category->name ?? '-' }}</td>
                                                 <td>
                                                     {{ number_format((float) $product->price, 2, ',', '.') }}
+                                                </td>
+                                                <td>
+                                                    @php($hpp = $product->cost_price ?? null)
+                                                    @if(!is_null($hpp))
+                                                        <span class="badge badge-light">{{ number_format((float) $hpp, 2, ',', '.') }}</span>
+                                                    @else
+                                                        <span class="text-muted">-</span>
+                                                    @endif
                                                 </td>
                                                 <td>
                                                     @if ($product->image)
@@ -105,22 +114,27 @@
                                                 </td>
                                                 <td>{{ $product->created_at }}</td>
                                                 <td>
-                                                    <div class="d-flex justify-content-center">
-                                                        <a href='{{ route('product.edit', $product->id) }}'
-                                                            class="btn btn-sm btn-info btn-icon">
-                                                            <i class="fas fa-edit"></i>
-                                                            Edit
-                                                        </a>
-
-                                                        <form action="{{ route('product.destroy', $product->id) }}"
-                                                            method="POST" class="ml-2">
-                                                            <input type="hidden" name="_method" value="DELETE" />
-                                                            <input type="hidden" name="_token"
-                                                                value="{{ csrf_token() }}" />
-                                                            <button class="btn btn-sm btn-danger btn-icon confirm-delete">
-                                                                <i class="fas fa-times"></i> Delete
-                                                            </button>
-                                                        </form>
+                                                    <div class="d-flex flex-wrap justify-content-center">
+                                                        <div class="btn-group btn-group-sm mr-2 mb-2" role="group" aria-label="Inventory Actions">
+                                                            <a href='{{ route('product-recipes.edit', $product) }}' class="btn btn-primary" data-toggle="tooltip" title="Kelola resep & komposisi produk">
+                                                                <i class="fas fa-utensils"></i> Resep
+                                                            </a>
+                                                            <a href='{{ route('product-recipes.produce-form', $product) }}' class="btn btn-secondary" data-toggle="tooltip" title="Produksi: konsumsi bahan sesuai resep">
+                                                                <i class="fas fa-industry"></i> Produksi
+                                                            </a>
+                                                        </div>
+                                                        <div class="btn-group btn-group-sm mb-2" role="group" aria-label="CRUD Actions">
+                                                            <a href='{{ route('product.edit', $product->id) }}' class="btn btn-info">
+                                                                <i class="fas fa-edit"></i> Edit
+                                                            </a>
+                                                            <form action="{{ route('product.destroy', $product->id) }}" method="POST" onsubmit="return confirm('Hapus produk ini?');">
+                                                                <input type="hidden" name="_method" value="DELETE" />
+                                                                <input type="hidden" name="_token" value="{{ csrf_token() }}" />
+                                                                <button class="btn btn-danger">
+                                                                    <i class="fas fa-times"></i> Delete
+                                                                </button>
+                                                            </form>
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -147,4 +161,11 @@
 
     <!-- Page Specific JS File -->
     <script src="{{ asset('js/page/features-posts.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.$ && $.fn.tooltip) {
+                $('[data-toggle="tooltip"]').tooltip();
+            }
+        });
+    </script>
 @endpush

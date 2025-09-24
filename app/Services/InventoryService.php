@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\RawMaterial;
 use App\Models\RawMaterialMovement;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -73,8 +74,28 @@ class InventoryService
                 'stock_after' => $material->stock_qty,
             ]);
 
+            // Minimum stock alert: notify admins when crossing threshold
+            try {
+                $min = (float) $material->min_stock;
+                if ($min > 0 && $currentQty > $min && (float)$material->stock_qty <= $min) {
+                    $admins = User::where('roles', 'admin')->get();
+                    if ($admins->isNotEmpty()) {
+                        $payload = [[
+                            'name' => $material->name,
+                            'sku' => $material->sku,
+                            'stock' => (float) $material->stock_qty,
+                            'min' => $min,
+                        ]];
+                        foreach ($admins as $admin) {
+                            $admin->notify(new \App\Notifications\LowStockAlert($payload));
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed sending low stock alerts: '.$e->getMessage());
+            }
+
             return $movement;
         });
     }
 }
-

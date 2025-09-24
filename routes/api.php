@@ -60,7 +60,13 @@ Route::post('/categories', [App\Http\Controllers\Api\CategoryController::class, 
 Route::post('/categories/edit', [App\Http\Controllers\Api\CategoryController::class, 'update'])->middleware('auth:sanctum');
 Route::delete('/categories/{id}', [App\Http\Controllers\Api\CategoryController::class, 'destroy'])->middleware('auth:sanctum');
 
-// Product recipe & production endpoints removed (inventory/production module disabled)
+// Product recipe & production endpoints
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/products/{id}/recipe', [App\Http\Controllers\Api\ProductRecipeController::class, 'showRecipe']);
+    Route::post('/products/{id}/recipe', [App\Http\Controllers\Api\ProductRecipeController::class, 'storeRecipe']);
+    Route::post('/products/{id}/produce', [App\Http\Controllers\Api\ProductRecipeController::class, 'produce']);
+    Route::get('/products/{id}/cogs', [App\Http\Controllers\Api\ProductRecipeController::class, 'cogs']);
+});
 
 // api resource order
 
@@ -97,7 +103,20 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 */
 
-// Raw materials & inventory endpoints removed (inventory module disabled)
+// Raw materials & inventory endpoints
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/raw-materials', [App\Http\Controllers\Api\RawMaterialController::class, 'index']);
+    Route::post('/raw-materials', [App\Http\Controllers\Api\RawMaterialController::class, 'store']);
+    Route::put('/raw-materials/{id}', [App\Http\Controllers\Api\RawMaterialController::class, 'update']);
+    Route::get('/raw-materials/{id}/movements', [App\Http\Controllers\Api\RawMaterialController::class, 'movements']);
+    Route::post('/raw-materials/{id}/adjust', [App\Http\Controllers\Api\RawMaterialController::class, 'adjustStock']);
+    Route::post('/raw-materials/{id}/purchase', [App\Http\Controllers\Api\RawMaterialController::class, 'purchase']);
+    Route::post('/raw-materials/{id}/stock-out', [App\Http\Controllers\Api\RawMaterialController::class, 'stockOut']);
+    Route::post('/raw-materials/{id}/opname', [App\Http\Controllers\Api\RawMaterialController::class, 'opname']);
+});
+
+// Inventory summary report
+Route::get('/inventory/summary', [App\Http\Controllers\Api\InventoryReportController::class, 'summary'])->middleware('auth:sanctum');
 
 // Employee management endpoints removed (employee module disabled)
 

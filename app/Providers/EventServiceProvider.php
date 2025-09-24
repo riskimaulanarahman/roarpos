@@ -17,6 +17,9 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
+        \App\Events\OrderPaid::class => [
+            \App\Listeners\ConsumeRawMaterialsOnOrderPaid::class,
+        ],
         // Inventory/production module removed: disable raw material consumption on order paid
         // \App\Events\OrderPaid::class => [
         //     \App\Listeners\ConsumeRawMaterialsOnOrderPaid::class,

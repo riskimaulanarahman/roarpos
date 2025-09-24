@@ -56,8 +56,21 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/products', function () { return redirect()->route('product.index'); })->name('products.redirect');
 
     // Admin-only web modules
-Route::middleware('role:admin')->group(function () {
-        // Inventory/production, employees, and attendance modules have been removed
+    Route::middleware('role:admin,user')->group(function () {
+        // Inventory & Production (web)
+        Route::get('/raw-materials', [\App\Http\Controllers\RawMaterialWebController::class, 'index'])->name('raw-materials.index');
+        Route::get('/raw-materials/create', [\App\Http\Controllers\RawMaterialWebController::class, 'create'])->name('raw-materials.create');
+        Route::post('/raw-materials', [\App\Http\Controllers\RawMaterialWebController::class, 'store'])->name('raw-materials.store');
+        Route::get('/raw-materials/{raw_material}/edit', [\App\Http\Controllers\RawMaterialWebController::class, 'edit'])->name('raw-materials.edit');
+        Route::put('/raw-materials/{raw_material}', [\App\Http\Controllers\RawMaterialWebController::class, 'update'])->name('raw-materials.update');
+        Route::get('/raw-materials/{raw_material}/adjust', [\App\Http\Controllers\RawMaterialWebController::class, 'adjustForm'])->name('raw-materials.adjust-form');
+        Route::post('/raw-materials/{raw_material}/adjust', [\App\Http\Controllers\RawMaterialWebController::class, 'adjust'])->name('raw-materials.adjust');
+        Route::get('/raw-materials/{raw_material}/movements', [\App\Http\Controllers\RawMaterialWebController::class, 'movements'])->name('raw-materials.movements');
+
+        Route::get('/products/{product}/recipe', [\App\Http\Controllers\ProductRecipeWebController::class, 'edit'])->name('product-recipes.edit');
+        Route::post('/products/{product}/recipe', [\App\Http\Controllers\ProductRecipeWebController::class, 'update'])->name('product-recipes.update');
+        Route::get('/products/{product}/produce', [\App\Http\Controllers\ProductRecipeWebController::class, 'produceForm'])->name('product-recipes.produce-form');
+        Route::post('/products/{product}/produce', [\App\Http\Controllers\ProductRecipeWebController::class, 'produce'])->name('product-recipes.produce');
     });
     Route::get('home/filter', [DashboardController::class, 'filter'])->name('dashboard_grafik.filter');
     Route::get('dashboard/sales-series', [GrafikSalesController::class, 'series'])->name('dashboard.sales_series');

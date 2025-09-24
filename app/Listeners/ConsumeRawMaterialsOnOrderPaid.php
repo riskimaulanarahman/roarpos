@@ -33,6 +33,10 @@ class ConsumeRawMaterialsOnOrderPaid
                 ->where('product_id', $item->product_id)
                 ->first();
             if (! $recipe) {
+                // Tidak ada resep: kurangi stok produk langsung
+                if ($item->product && $item->quantity > 0) {
+                    $item->product->decrement('stock', (int) $item->quantity);
+                }
                 continue;
             }
 
@@ -55,4 +59,3 @@ class ConsumeRawMaterialsOnOrderPaid
         }
     }
 }
-

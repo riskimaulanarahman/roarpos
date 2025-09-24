@@ -48,7 +48,14 @@ class ProductRecipeController extends Controller
                     'waste_pct' => $item['waste_pct'] ?? 0,
                 ]);
             }
-            return $recipe->load('items.rawMaterial');
+            $recipe = $recipe->load('items.rawMaterial');
+
+            // Update HPP (cost_price) pada products dari resep
+            $product = Product::findOrFail($id);
+            $product->cost_price = app(\App\Services\RecipeService::class)->calculateCogs($product);
+            $product->save();
+
+            return $recipe;
         });
 
         return response()->json(['message' => 'Recipe saved', 'data' => $recipe]);
@@ -70,4 +77,3 @@ class ProductRecipeController extends Controller
         return response()->json(['data' => ['cogs_per_unit' => $cogs]]);
     }
 }
-

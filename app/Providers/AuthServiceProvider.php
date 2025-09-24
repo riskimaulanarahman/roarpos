@@ -30,7 +30,8 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('inventory.manage', function ($user) {
-            return in_array($user->roles, ['admin']);
+            // Izinkan admin dan user untuk modul inventory
+            return in_array($user->roles, ['admin','user']);
         });
 
         Gate::define('employees.manage', function ($user) {
