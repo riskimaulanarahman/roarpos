@@ -4,9 +4,42 @@
 @php($refundTotal = $totals['refunds'] ?? 0)
 @php($difference = $cashBalance['difference'] ?? 0)
 
+@php($sessionTimezoneOffset = $sessionTimezoneOffset ?? null)
+@php($resolveDate = function ($value, $fallback) use ($sessionTimezone, $sessionTimezoneOffset) {
+    if ($value) {
+        $carbon = \Illuminate\Support\Carbon::parse($value);
+        if ($sessionTimezone) {
+            return $carbon->setTimezone($sessionTimezone);
+        }
+
+        if ($sessionTimezoneOffset !== null) {
+            return $carbon->setTimezone('UTC')->addMinutes($sessionTimezoneOffset);
+        }
+
+        return $carbon;
+    }
+
+    if ($fallback instanceof \Illuminate\Support\Carbon) {
+        $copy = $fallback->copy();
+        if ($sessionTimezone) {
+            return $copy->setTimezone($sessionTimezone);
+        }
+
+        if ($sessionTimezoneOffset !== null) {
+            return $copy->setTimezone('UTC')->addMinutes($sessionTimezoneOffset);
+        }
+
+        return $copy;
+    }
+
+    return null;
+})
+@php($openedAt = $resolveDate($session['opened_at'] ?? null, $report->session?->opened_at))
+@php($closedAt = $resolveDate($session['closed_at'] ?? null, $report->session?->closed_at))
+
 @include('emails.partials.brand-header', [
     'title' => 'Ringkasan Tutup Kasir',
-    'subtitle' => optional($report->session?->closed_at)->timezone(config('app.timezone'))->format('d F Y, H:i') ?? null,
+    // 'subtitle' => optional($closedAt)->format('d F Y, H:i'),
 ])
 
 <div style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 16px; padding: 24px; margin-bottom: 24px;">
@@ -37,8 +70,8 @@
     <div style="margin-bottom: 16px;">
         <div style="font-weight: 600; color: #111827; font-size: 15px; margin-bottom: 8px;">Informasi Sesi</div>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px; color: #374151;">
-            <tr><td style="padding: 4px 0; width: 45%;">Dibuka</td><td style="padding: 4px 0;">{{ optional($report->session?->opened_at)->timezone(config('app.timezone'))->format('d M Y H:i') ?? '-' }}</td></tr>
-            <tr><td style="padding: 4px 0;">Ditutup</td><td style="padding: 4px 0;">{{ optional($report->session?->closed_at)->timezone(config('app.timezone'))->format('d M Y H:i') ?? '-' }}</td></tr>
+            {{-- <tr><td style="padding: 4px 0; width: 45%;">Dibuka</td><td style="padding: 4px 0;">{{ optional($openedAt)->format('d M Y H:i') ?? '-' }}</td></tr>
+            <tr><td style="padding: 4px 0;">Ditutup</td><td style="padding: 4px 0;">{{ optional($closedAt)->format('d M Y H:i') ?? '-' }}</td></tr> --}}
             <tr><td style="padding: 4px 0;">Modal awal</td><td style="padding: 4px 0;">Rp{{ number_format($session['opening_balance'] ?? 0, 0, ',', '.') }}</td></tr>
             <tr><td style="padding: 4px 0;">Saldo akhir</td><td style="padding: 4px 0;">Rp{{ number_format($session['closing_balance'] ?? 0, 0, ',', '.') }}</td></tr>
         </table>

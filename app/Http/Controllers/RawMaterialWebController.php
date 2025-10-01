@@ -7,6 +7,8 @@ use App\Models\RawMaterialMovement;
 use App\Services\InventoryService;
 use App\Models\Expense;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use App\Models\Unit;
 use Illuminate\Database\QueryException;
 
 class RawMaterialWebController extends Controller
@@ -28,7 +30,8 @@ class RawMaterialWebController extends Controller
     public function create()
     {
         $nameOptions = $this->expenseNameOptions();
-        return view('pages.raw_materials.create', compact('nameOptions'));
+        $units = Unit::orderBy('name')->get();
+        return view('pages.raw_materials.create', compact('nameOptions','units'));
     }
 
     public function store(Request $request)
@@ -49,7 +52,8 @@ class RawMaterialWebController extends Controller
     public function edit(RawMaterial $raw_material)
     {
         $nameOptions = $this->expenseNameOptions();
-        return view('pages.raw_materials.edit', ['material' => $raw_material, 'nameOptions' => $nameOptions]);
+        $units = Unit::orderBy('name')->get();
+        return view('pages.raw_materials.edit', ['material' => $raw_material, 'nameOptions' => $nameOptions, 'units' => $units]);
     }
 
     public function update(Request $request, RawMaterial $raw_material)
@@ -95,17 +99,36 @@ class RawMaterialWebController extends Controller
     public function destroy(RawMaterial $raw_material)
     {
         if ($raw_material->expenseItems()->exists()) {
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'message' => 'Bahan tidak dapat dihapus karena sudah terhubung dengan detail pengeluaran.'
+                ], 422);
+            }
             return redirect()->route('raw-materials.index')->with('error', 'Bahan tidak dapat dihapus karena sudah terhubung dengan detail pengeluaran.');
         }
 
         if ($raw_material->recipeItems()->exists()) {
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'message' => 'Bahan tidak dapat dihapus karena dipakai pada resep produk.'
+                ], 422);
+            }
             return redirect()->route('raw-materials.index')->with('error', 'Bahan tidak dapat dihapus karena dipakai pada resep produk.');
         }
 
         try {
             $raw_material->delete();
         } catch (QueryException $e) {
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'message' => 'Bahan tidak dapat dihapus saat ini.'
+                ], 422);
+            }
             return redirect()->route('raw-materials.index')->with('error', 'Bahan tidak dapat dihapus saat ini.');
+        }
+
+        if (request()->wantsJson()) {
+            return response()->json(['message' => 'Bahan dihapus.']);
         }
 
         return redirect()->route('raw-materials.index')->with('success', 'Bahan dihapus.');

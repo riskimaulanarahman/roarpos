@@ -124,6 +124,8 @@ class CashierSessionController extends Controller
         $payload = $request->validate([
             'closing_balance' => ['required', 'numeric', 'gte:0'],
             'remarks' => ['nullable', 'string'],
+            'timezone' => ['nullable', 'timezone'],
+            'timezone_offset' => ['nullable', 'integer'],
         ]);
 
         $user = $request->user();
@@ -146,8 +148,11 @@ class CashierSessionController extends Controller
             ], 409);
         }
 
+        $timezone = $payload['timezone'] ?? null;
+        $timezoneOffset = $payload['timezone_offset'] ?? null;
+
         try {
-            [$session, $summary, $report] = DB::transaction(function () use ($session, $payload, $user) {
+            [$session, $summary, $report] = DB::transaction(function () use ($session, $payload, $user, $timezone, $timezoneOffset) {
                 $session->update([
                     'closing_balance' => round($payload['closing_balance'], 2),
                     'closed_at' => now(),
@@ -157,8 +162,14 @@ class CashierSessionController extends Controller
                 ]);
 
                 $session->refresh();
+                if ($timezone) {
+                    $session->setAttribute('timezone', $timezone);
+                }
+                if ($timezoneOffset !== null) {
+                    $session->setAttribute('timezone_offset', (int) $timezoneOffset);
+                }
 
-                $summary = $this->summaryService->generate($session);
+                $summary = $this->summaryService->generate($session, $timezone, $timezoneOffset);
                 $report = $this->summaryService->createReport(
                     $session,
                     $summary,
@@ -175,10 +186,14 @@ class CashierSessionController extends Controller
 
         $this->summaryService->dispatchEmail($report);
 
+        $sessionResponse = $session->fresh();
+        $sessionResponse->setAttribute('timezone', $summary['session']['timezone'] ?? null);
+        $sessionResponse->setAttribute('timezone_offset', $summary['session']['timezone_offset'] ?? null);
+
         return response()->json([
             'message' => 'Cashier session closed',
             'data' => [
-                'session' => $session->fresh(),
+                'session' => $sessionResponse,
                 'summary' => $summary,
                 'report_id' => $report->id,
             ],

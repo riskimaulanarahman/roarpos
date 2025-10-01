@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
+use App\Models\Traits\Blameable;
+
 class RawMaterial extends Model
 {
-    use HasFactory;
+    use HasFactory, Blameable;
 
     protected $fillable = [
-        'sku','name','unit','unit_cost','stock_qty','min_stock'
+        'sku','name','unit','unit_cost','stock_qty','min_stock','created_by','updated_by'
     ];
 
     protected $casts = [

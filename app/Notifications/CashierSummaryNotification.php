@@ -31,6 +31,14 @@ class CashierSummaryNotification extends Notification implements ShouldQueue
         $transactions = $summary['transactions'] ?? [];
         $cashBalance = $summary['cash_balance'] ?? [];
         $date = Carbon::now()->translatedFormat('d F Y');
+        $timezoneOffset = isset($session['timezone_offset']) ? (int) $session['timezone_offset'] : null;
+        $sessionTimezone = $session['timezone']
+            ?? optional($this->report->session?->opened_at)->timezoneName
+            ?? optional($this->report->session?->closed_at)->timezoneName;
+
+        if (!$sessionTimezone && $timezoneOffset === null) {
+            $sessionTimezone = config('app.timezone');
+        }
 
         return (new MailMessage)
             ->subject('Ringkasan Tutup Kasir - '.($this->report->user->store_name ?? config('app.name')).' ('.$date.')')
@@ -43,6 +51,8 @@ class CashierSummaryNotification extends Notification implements ShouldQueue
                 'payments' => $payments,
                 'transactions' => $transactions,
                 'cashBalance' => $cashBalance,
+                'sessionTimezone' => $sessionTimezone,
+                'sessionTimezoneOffset' => $timezoneOffset,
             ]);
     }
 }

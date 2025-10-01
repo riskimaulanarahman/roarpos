@@ -6,11 +6,32 @@ use App\Jobs\SendCashierSummaryEmail;
 use App\Models\CashierClosureReport;
 use App\Models\CashierSession;
 use App\Models\Order;
+use Illuminate\Support\Carbon;
 
 class CashierSummaryService
 {
-    public function generate(CashierSession $session): array
-    {
+    public function generate(
+        CashierSession $session,
+        ?string $timezone = null,
+        ?int $timezoneOffset = null
+    ): array {
+        $timezone = $timezone ?: $session->getAttribute('timezone');
+        $timezoneOffset = $timezoneOffset ?? $session->getAttribute('timezone_offset');
+
+        $openedAtLocal = $this->convertToLocal($session->opened_at, $timezone, $timezoneOffset);
+        $closedAtLocal = $this->convertToLocal($session->closed_at, $timezone, $timezoneOffset);
+
+        if ($timezone && $timezoneOffset === null) {
+            $timezoneOffset = $closedAtLocal?->utcOffset() ?? $openedAtLocal?->utcOffset();
+        }
+
+        if (!$timezone && $timezoneOffset === null) {
+            $timezone = config('app.timezone');
+            $openedAtLocal = $this->convertToLocal($session->opened_at, $timezone, null);
+            $closedAtLocal = $this->convertToLocal($session->closed_at, $timezone, null);
+            $timezoneOffset = $closedAtLocal?->utcOffset() ?? $openedAtLocal?->utcOffset();
+        }
+
         $start = $session->opened_at ?? $session->created_at;
         $end = $session->closed_at ?? now();
 
@@ -58,10 +79,12 @@ class CashierSummaryService
         $summary = [
             'session' => [
                 'id' => $session->id,
-                'opened_at' => optional($session->opened_at)->toIso8601String(),
-                'closed_at' => optional($session->closed_at)->toIso8601String(),
+                'opened_at' => $openedAtLocal?->toIso8601String(),
+                'closed_at' => $closedAtLocal?->toIso8601String(),
                 'opening_balance' => $openingBalance,
                 'closing_balance' => $countedCash,
+                'timezone' => $timezone,
+                'timezone_offset' => $timezoneOffset,
             ],
             'totals' => [
                 'sales' => $totalSales,
@@ -85,6 +108,25 @@ class CashierSummaryService
         ];
 
         return $summary;
+    }
+
+    private function convertToLocal(?Carbon $dateTime, ?string $timezone, ?int $timezoneOffset): ?Carbon
+    {
+        if (!$dateTime) {
+            return null;
+        }
+
+        $instance = $dateTime->copy();
+
+        if ($timezone) {
+            return $instance->setTimezone($timezone);
+        }
+
+        if ($timezoneOffset !== null) {
+            return $instance->setTimezone('UTC')->addMinutes($timezoneOffset);
+        }
+
+        return $instance;
     }
 
     public function createReport(

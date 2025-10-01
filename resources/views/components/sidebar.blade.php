@@ -31,7 +31,7 @@
                     </a>
                 </li>
 
-                @php($invOpen = Request::is('raw-materials*') || Request::is('products/*/recipe*') || Request::is('products/*/produce*'))
+                @php($invOpen = Request::is('raw-materials*') || Request::is('units*') || Request::is('products/*/recipe*') || Request::is('products/*/produce*'))
                 <li class="nav-item dropdown {{ $invOpen ? 'active' : '' }}">
                     <a href="#" class="nav-link has-dropdown {{ $invOpen ? 'active' : '' }}">
                         <i class="fas fa-boxes-stacked"></i><span>Inventory</span>
@@ -40,6 +40,11 @@
                         <li class="{{ Request::is('raw-materials*') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('raw-materials.index') }}">
                                 <i class="fas fa-flask"></i> <span>Bahan Baku</span>
+                            </a>
+                        </li>
+                        <li class="{{ Request::is('units*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('units.index') }}">
+                                <i class="fas fa-ruler-combined"></i> <span>Satuan</span>
                             </a>
                         </li>
                         <li>

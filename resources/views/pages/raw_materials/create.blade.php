@@ -34,13 +34,17 @@
                 </div>
                 <div class="form-group">
                   <label>Satuan</label>
-                  <select name="unit" class="form-control">
-                    <option value="g">g</option>
-                    <option value="ml">ml</option>
-                    <option value="pcs">pcs</option>
-                    <option value="kg">kg</option>
-                    <option value="l">l</option>
+                  <select name="unit" class="form-control" required {{ $units->isEmpty() ? 'disabled' : '' }}>
+                    <option value="">- Pilih satuan -</option>
+                    @foreach($units as $unit)
+                      <option value="{{ $unit->code }}" {{ old('unit', $loop->first ? $unit->code : null) === $unit->code ? 'selected' : '' }}>
+                        {{ $unit->name }} ({{ $unit->code }})
+                      </option>
+                    @endforeach
                   </select>
+                  @if($units->isEmpty())
+                    <small class="form-text text-danger">Belum ada data satuan. Silakan tambahkan satuan terlebih dahulu.</small>
+                  @endif
                 </div>
                 @php
                     $oldMinStock = old('min_stock');
@@ -63,7 +67,7 @@
                 </div>
               </div>
               <div class="card-footer text-right">
-                <button class="btn btn-primary">Simpan</button>
+                <button class="btn btn-primary" {{ $units->isEmpty() ? 'disabled' : '' }}>Simpan</button>
               </div>
             </form>
           </div>

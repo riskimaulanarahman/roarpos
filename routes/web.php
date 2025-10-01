@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GrafikSalesController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -75,6 +76,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('dashboard/sales-series.csv', [GrafikSalesController::class, 'seriesCsv'])->name('dashboard.sales_series_csv');
 
 Route::resource('user', UserController::class)->middleware('role:admin');
+Route::resource('units', UnitController::class)->middleware('role:admin');
 
     Route::resource('product', \App\Http\Controllers\ProductController::class);
     // Removed product wizard routes (no wizard/recipe/review forms)

@@ -26,7 +26,7 @@ class RawMaterialStoreRequest extends FormRequest
         return [
             'sku' => ['nullable','string','max:50','unique:raw_materials,sku'],
             'name' => ['required','string','max:255'],
-            'unit' => ['required','in:g,ml,pcs,kg,l'],
+            'unit' => ['required','exists:units,code'],
             'min_stock' => ['nullable','numeric','min:0'],
         ];
     }

@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         // Use the comprehensive demo seeder
         $this->call([
+            UnitSeeder::class,
             UpdatedDemoSeeder::class,
             FinanceCategorySeeder::class,
             RawMaterialSeeder::class,

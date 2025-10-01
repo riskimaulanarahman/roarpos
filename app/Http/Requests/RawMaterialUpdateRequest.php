@@ -26,7 +26,7 @@ class RawMaterialUpdateRequest extends FormRequest
         return [
             'sku' => ['sometimes','nullable','string','max:50','unique:raw_materials,sku,'.$this->route('id')],
             'name' => ['sometimes','string','max:255'],
-            'unit' => ['sometimes','in:g,ml,pcs,kg,l'],
+            'unit' => ['sometimes','exists:units,code'],
             'min_stock' => ['sometimes','numeric','min:0'],
         ];
     }

@@ -64,13 +64,69 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.js-delete-material').forEach(function (form) {
-      form.addEventListener('submit', function (event) {
-        const materialName = this.closest('tr')?.querySelector('td:nth-child(2)')?.textContent?.trim() || 'bahan baku ini';
-        if (!confirm(`Hapus ${materialName}? Tindakan ini tidak dapat dibatalkan.`)) {
-          event.preventDefault();
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        const row = this.closest('tr');
+        const materialName = row?.querySelector('td:nth-child(2)')?.textContent?.trim() || 'bahan baku ini';
+
+        const result = await Swal.fire({
+          title: `Hapus ${materialName}?`,
+          text: 'Tindakan ini tidak dapat dibatalkan.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Ya, hapus',
+          cancelButtonText: 'Batal',
+        });
+
+        if (!result.isConfirmed) {
+          return;
+        }
+
+        const formData = new FormData(this);
+        const action = this.getAttribute('action');
+        const methodInput = this.querySelector('input[name="_method"]');
+        const method = methodInput ? methodInput.value.toUpperCase() : 'POST';
+
+        try {
+          const response = await fetch(action, {
+            method: method === 'POST' ? 'POST' : 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRF-TOKEN': this.querySelector('input[name="_token"]').value,
+              'Accept': 'application/json',
+            },
+            body: formData,
+          });
+
+          if (response.ok) {
+            await Swal.fire({
+              title: 'Berhasil',
+              text: 'Bahan dihapus.',
+              icon: 'success',
+              timer: 1500,
+              showConfirmButton: false,
+            });
+            window.location.reload();
+            return;
+          }
+
+          const data = await response.json();
+          const message = data?.message || 'Bahan tidak dapat dihapus.';
+          await Swal.fire({
+            title: 'Gagal',
+            text: message,
+            icon: 'error',
+          });
+        } catch (error) {
+          await Swal.fire({
+            title: 'Gagal',
+            text: 'Terjadi kesalahan. Silakan coba lagi.',
+            icon: 'error',
+          });
         }
       });
     });

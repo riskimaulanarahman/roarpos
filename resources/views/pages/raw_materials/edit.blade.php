@@ -36,11 +36,16 @@
                 </div>
                 <div class="form-group">
                   <label>Satuan</label>
-                  <select name="unit" class="form-control">
-                    @foreach(['g','ml','pcs','kg','l'] as $u)
-                      <option value="{{ $u }}" {{ $material->unit==$u?'selected':'' }}>{{ $u }}</option>
+                  <select name="unit" class="form-control" required {{ $units->isEmpty() ? 'disabled' : '' }}>
+                    @foreach($units as $unit)
+                      <option value="{{ $unit->code }}" {{ old('unit', $material->unit) === $unit->code ? 'selected' : '' }}>
+                        {{ $unit->name }} ({{ $unit->code }})
+                      </option>
                     @endforeach
                   </select>
+                  @if($units->isEmpty())
+                    <small class="form-text text-danger">Belum ada data satuan. Silakan tambahkan satuan terlebih dahulu.</small>
+                  @endif
                 </div>
                 @php
                   $minStockOld = old('min_stock', $material->min_stock);

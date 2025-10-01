@@ -12,21 +12,25 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('expense_items', function (Blueprint $table) {
-            foreach (Schema::getColumnListing('expense_items') as $column) {
-                if (! in_array($column, [
-                    'id', 'expense_id', 'raw_material_id', 'description', 'unit', 'qty',
-                    'unit_cost', 'total_cost', 'notes', 'item_price', 'created_at', 'updated_at'
-                ])) {
-                    if ($column !== 'item_price') {
-                        $table->dropColumn($column);
-                    }
-                }
-            }
-            if (! Schema::hasColumn('expense_items', 'item_price')) {
+        $allowed = [
+            'id', 'expense_id', 'raw_material_id', 'description', 'unit', 'qty',
+            'unit_cost', 'total_cost', 'notes', 'item_price', 'created_at', 'updated_at'
+        ];
+
+        $columns = Schema::getColumnListing('expense_items');
+        $drop = array_values(array_diff($columns, $allowed));
+
+        if (!empty($drop)) {
+            Schema::table('expense_items', function (Blueprint $table) use ($drop) {
+                $table->dropColumn($drop);
+            });
+        }
+
+        if (! Schema::hasColumn('expense_items', 'item_price')) {
+            Schema::table('expense_items', function (Blueprint $table) {
                 $table->decimal('item_price', 18, 2)->nullable()->after('qty');
-            }
-        });
+            });
+        }
     }
 
     public function down(): void
