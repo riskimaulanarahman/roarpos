@@ -23,13 +23,13 @@
             <table class="table table-striped">
               <thead>
                 <tr>
-                  <th>SKU</th>
-                  <th>Nama</th>
+                  <th>Kode</th>
+                  <th>Nama Bahan</th>
                   <th>Satuan</th>
-                  <th>Avg Cost</th>
-                  <th>Stock</th>
-                  <th>Min Stock</th>
-                  <th></th>
+                  <th>Harga Rata-rata</th>
+                  <th>Stok</th>
+                  <th>Stok Minimum</th>
+                  <th class="text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -38,13 +38,17 @@
                   <td>{{ $m->sku }}</td>
                   <td>{{ $m->name }}</td>
                   <td>{{ $m->unit }}</td>
-                  <td>{{ number_format($m->unit_cost, 2, ',', '.') }}</td>
-                  <td>{{ number_format($m->stock_qty, 2, ',', '.') }}</td>
-                  <td>{{ number_format($m->min_stock, 2, ',', '.') }}</td>
+                  <td>{{ number_format($m->unit_cost, 1, ',', '.') }}</td>
+                  <td>{{ number_format($m->stock_qty, 1, ',', '.') }}</td>
+                  <td>{{ number_format($m->min_stock, 1, ',', '.') }}</td>
                   <td class="text-right">
                     <a href="{{ route('raw-materials.edit',$m) }}" class="btn btn-sm btn-info">Edit</a>
                     <a href="{{ route('raw-materials.adjust-form',$m) }}" class="btn btn-sm btn-warning">Adjust</a>
-                    <a href="{{ route('raw-materials.movements',$m) }}" class="btn btn-sm btn-secondary">Movements</a>
+                    <form action="{{ route('raw-materials.destroy',$m) }}" method="POST" class="d-inline js-delete-material">
+                      @csrf
+                      @method('DELETE')
+                      <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
+                    </form>
                   </td>
                 </tr>
                 @endforeach
@@ -59,3 +63,17 @@
 </div>
 @endsection
 
+@push('scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-delete-material').forEach(function (form) {
+      form.addEventListener('submit', function (event) {
+        const materialName = this.closest('tr')?.querySelector('td:nth-child(2)')?.textContent?.trim() || 'bahan baku ini';
+        if (!confirm(`Hapus ${materialName}? Tindakan ini tidak dapat dibatalkan.`)) {
+          event.preventDefault();
+        }
+      });
+    });
+  });
+</script>
+@endpush

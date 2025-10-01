@@ -14,11 +14,21 @@ class ProductRecipeWebController extends Controller
     public function edit(Product $product)
     {
         $recipe = ProductRecipe::with('items')->firstOrNew(['product_id' => $product->id]);
-        $materials = RawMaterial::orderBy('name')->get();
+        $materials = RawMaterial::query()
+            ->where(function ($builder) use ($recipe) {
+                $builder->whereHas('expenseItems');
+                if ($recipe->exists) {
+                    $builder->orWhereHas('recipeItems', function ($query) use ($recipe) {
+                        $query->where('product_recipe_id', $recipe->id);
+                    });
+                }
+            })
+            ->orderBy('name')
+            ->get();
         return view('pages.product_recipes.edit', compact('product','recipe','materials'));
     }
 
-    public function update(Request $request, Product $product)
+    public function update(Request $request, Product $product, RecipeService $recipes)
     {
         $data = $request->validate([
             'yield_qty' => ['required','numeric','min:0.0001'],
@@ -44,22 +54,13 @@ class ProductRecipeWebController extends Controller
             ]);
         }
 
+        $product = $product->fresh();
+        $product->cost_price = $recipes->calculateCogs($product);
+        $estimate = $recipes->estimateBuildableUnits($product);
+        $product->stock = max(0, (int) ($estimate ?? 0));
+        $product->save();
+
         return redirect()->route('product-recipes.edit', $product->id)->with('success','Resep disimpan');
     }
 
-    public function produceForm(Product $product)
-    {
-        return view('pages.product_recipes.produce', compact('product'));
-    }
-
-    public function produce(Request $request, Product $product, RecipeService $recipes)
-    {
-        $data = $request->validate([
-            'batches' => ['required','integer','min:1'],
-            'notes' => ['nullable','string']
-        ]);
-        $result = $recipes->produce($product, (int)$data['batches'], $data['notes'] ?? null);
-        return redirect()->route('product-recipes.edit', $product->id)->with('success', 'Produksi selesai. HPP/unit: '.$result['cogs_per_unit']);
-    }
 }
-

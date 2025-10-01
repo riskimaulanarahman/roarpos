@@ -115,14 +115,6 @@
                                                 <td>{{ $product->created_at }}</td>
                                                 <td>
                                                     <div class="d-flex flex-wrap justify-content-center">
-                                                        <div class="btn-group btn-group-sm mr-2 mb-2" role="group" aria-label="Inventory Actions">
-                                                            <a href='{{ route('product-recipes.edit', $product) }}' class="btn btn-primary" data-toggle="tooltip" title="Kelola resep & komposisi produk">
-                                                                <i class="fas fa-utensils"></i> Resep
-                                                            </a>
-                                                            <a href='{{ route('product-recipes.produce-form', $product) }}' class="btn btn-secondary" data-toggle="tooltip" title="Produksi: konsumsi bahan sesuai resep">
-                                                                <i class="fas fa-industry"></i> Produksi
-                                                            </a>
-                                                        </div>
                                                         <div class="btn-group btn-group-sm mb-2" role="group" aria-label="CRUD Actions">
                                                             <a href='{{ route('product.edit', $product->id) }}' class="btn btn-info">
                                                                 <i class="fas fa-edit"></i> Edit

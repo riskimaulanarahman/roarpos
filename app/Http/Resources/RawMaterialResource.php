@@ -14,12 +14,11 @@ class RawMaterialResource extends JsonResource
             'sku' => $this->sku,
             'name' => $this->name,
             'unit' => $this->unit,
-            'unit_cost' => (float) $this->unit_cost,
-            'stock_qty' => (float) $this->stock_qty,
-            'min_stock' => (float) $this->min_stock,
+            'unit_cost' => round((float) $this->unit_cost, 1),
+            'stock_qty' => round((float) $this->stock_qty, 1),
+            'min_stock' => round((float) $this->min_stock, 1),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }
-

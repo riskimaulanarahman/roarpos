@@ -13,8 +13,8 @@
         'id' => 'help-raw-edit',
         'title' => 'Panduan singkat • Bahan Pokok',
         'items' => [
-          'Perbarui data yang diperlukan. Untuk pembelian/penambahan stok gunakan menu <em>Adjust Stok</em>.',
-          'Saat menambah stok (positif), isi Unit Cost (harga/unit) agar harga rata-rata berjalan diperbarui dengan benar.',
+          'Perbarui informasi dasar bahan. Stok hanya berubah lewat transaksi Uang Keluar atau menu <em>Adjust Stok</em>.',
+          'Saat menambah stok melalui Adjust, isi Unit Cost agar harga rata-rata berjalan akurat.',
           'Tampilan angka dibulatkan 2 desimal. Perhitungan internal tetap presisi.',
         ],
       ])
@@ -26,12 +26,13 @@
               @method('PUT')
               <div class="card-body">
                 <div class="form-group">
-                  <label>SKU</label>
-                  <input type="text" name="sku" class="form-control" value="{{ $material->sku }}" required>
+                  <label>SKU <span class="text-muted">(kosongkan untuk auto-generate)</span></label>
+                  <input type="text" name="sku" class="form-control" value="{{ old('sku', $material->sku) }}" placeholder="Biarkan kosong untuk mempertahankan/generate">
+                  <small class="form-text text-muted">Jika dikosongkan sistem akan mempertahankan SKU lama atau membuat yang baru bila belum ada.</small>
                 </div>
                 <div class="form-group">
                   <label>Nama</label>
-                  <input type="text" name="name" class="form-control" value="{{ $material->name }}" required>
+                  <input type="text" name="name" class="form-control" list="expense-name-options" value="{{ $material->name }}" required>
                 </div>
                 <div class="form-group">
                   <label>Satuan</label>
@@ -41,17 +42,24 @@
                     @endforeach
                   </select>
                 </div>
+                @php
+                  $minStockOld = old('min_stock', $material->min_stock);
+                  $minStockDisplay = ($minStockOld === null || $minStockOld === '') ? '' : number_format((float) $minStockOld, 1, '.', '');
+                @endphp
                 <div class="form-group">
-                  <label>Avg Cost</label>
-                  <input type="number" step="0.0001" name="unit_cost" class="form-control" value="{{ $material->unit_cost }}" required>
+                  <label>Harga</label>
+                  <div class="form-control-plaintext">{{ number_format((float) $material->unit_cost, 1, ',', '.') }} (otomatis)</div>
+                  <small class="form-text text-muted">Harga mengikuti transaksi Uang Keluar terkait pembelian bahan.</small>
                 </div>
                 <div class="form-group">
-                  <label>Stock</label>
-                  <input type="number" step="0.0001" name="stock_qty" class="form-control" value="{{ $material->stock_qty }}" required>
+                  <label>Stok Saat Ini</label>
+                  <input type="number" step="0.1" class="form-control" value="{{ number_format((float) $material->stock_qty, 1, '.', '') }}" disabled>
+                  <small class="form-text text-muted">Gunakan menu Adjust Stok untuk mengubah nilai ini.</small>
                 </div>
                 <div class="form-group">
-                  <label>Min Stock</label>
-                  <input type="number" step="0.0001" name="min_stock" class="form-control" value="{{ $material->min_stock }}" required>
+                  <label>Stok Minimum</label>
+                  <input type="number" step="0.1" name="min_stock" class="form-control" value="{{ $minStockDisplay }}">
+                  <small class="form-text text-muted">Digunakan sebagai batas notifikasi stok rendah.</small>
                 </div>
               </div>
               <div class="card-footer text-right">
@@ -62,7 +70,20 @@
         </div>
       </div>
     </div>
+    <datalist id="expense-name-options">
+      @foreach($nameOptions ?? [] as $name)
+        <option value="{{ $name }}"></option>
+      @endforeach
+    </datalist>
   </section>
 </div>
 @endsection
 
+
+@push('scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // No additional behaviour needed on edit form.
+  });
+</script>
+@endpush

@@ -162,4 +162,4 @@ Includes feature tests for PIN login, attendance flow, and recipe/inventory (mov
 ## Notes
 
 - COGS is calculated using moving average of raw materials with waste percentage: HPP = Σ( qty_per_yield * (1 + waste_pct/100) * average_unit_cost ) / yield_qty.
-- Hooks into order consumption are optional; current implementation exposes a ProductionCompleted event. To consume on sales, dispatch an event after order is paid and subscribe a listener that calls RecipeService->produce based on quantities.
+- Hooks into order consumption rely on the OrderPaid listener to deduct raw materials whenever sales are completed; manual production workflows are no longer available.

@@ -29,8 +29,8 @@ class LowStockSummary extends Notification implements ShouldQueue
             ->subject($subject)
             ->markdown('emails.low_stock_summary', [
                 'appName' => config('app.name'),
+                'logoUrl' => asset('img/toga-gold-ts.png'),
                 'items' => $this->items,
             ]);
     }
 }
-

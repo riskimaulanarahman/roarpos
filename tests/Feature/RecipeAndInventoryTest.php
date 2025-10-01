@@ -53,14 +53,14 @@ class RecipeAndInventoryTest extends TestCase
             'waste_pct' => 10,
         ]);
 
-        $recipes = new RecipeService($inv);
+        $recipes = new RecipeService();
         $cogs = $recipes->calculateCogs($product);
         // qty needed = 10 * 1.1 = 11g; avg cost 0.0200 => 0.22
         $this->assertEquals(0.22, round($cogs, 2));
 
-        // produce 2 batches => consume 22g
-        $recipes->produce($product, 2, 'test');
-        $this->assertEquals(2000.0 - 22.0, (float)$material->fresh()->stock_qty);
+        $estimatedUnits = $recipes->estimateBuildableUnits($product->fresh());
+        $this->assertEquals((int) floor(2000 / 11), $estimatedUnits);
+
     }
 }
 

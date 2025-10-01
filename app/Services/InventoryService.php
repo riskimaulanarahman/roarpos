@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Expense;
 use App\Models\RawMaterial;
 use App\Models\RawMaterialMovement;
 use App\Models\User;
@@ -78,16 +79,16 @@ class InventoryService
             try {
                 $min = (float) $material->min_stock;
                 if ($min > 0 && $currentQty > $min && (float)$material->stock_qty <= $min) {
-                    $admins = User::where('roles', 'admin')->get();
-                    if ($admins->isNotEmpty()) {
+                    $recipients = $this->resolveLowStockRecipients($material);
+                    if ($recipients->isNotEmpty()) {
                         $payload = [[
                             'name' => $material->name,
                             'sku' => $material->sku,
                             'stock' => (float) $material->stock_qty,
                             'min' => $min,
                         ]];
-                        foreach ($admins as $admin) {
-                            $admin->notify(new \App\Notifications\LowStockAlert($payload));
+                        foreach ($recipients as $recipient) {
+                            $recipient->notify(new \App\Notifications\LowStockAlert($payload));
                         }
                     }
                 }
@@ -97,5 +98,43 @@ class InventoryService
 
             return $movement;
         });
+    }
+
+    private function resolveLowStockRecipients(RawMaterial $material)
+    {
+        $ids = collect();
+
+        $movementUserIds = RawMaterialMovement::query()
+            ->where('raw_material_id', $material->id)
+            ->whereNotNull('created_by')
+            ->pluck('created_by');
+
+        if ($movementUserIds->isNotEmpty()) {
+            $ids = $ids->merge($movementUserIds);
+        }
+
+        $expenseUserIds = Expense::query()
+            ->whereHas('items', function ($query) use ($material) {
+                $query->where('raw_material_id', $material->id);
+            })
+            ->pluck('created_by');
+
+        if ($expenseUserIds->isNotEmpty()) {
+            $ids = $ids->merge($expenseUserIds);
+        }
+
+        if ($ids->isEmpty() && Auth::id()) {
+            $ids->push(Auth::id());
+        }
+
+        $ids = $ids->unique()->filter();
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return User::whereIn('id', $ids)
+            ->where('roles', '!=', 'admin')
+            ->get();
     }
 }

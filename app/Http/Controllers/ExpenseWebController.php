@@ -4,16 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\RawMaterial;
+use App\Services\ExpenseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Carbon;
 
 class ExpenseWebController extends Controller
 {
+    public function __construct(private ExpenseService $expenses)
+    {
+    }
+
     public function index(Request $request)
     {
         $q = Expense::query()
             ->where('created_by', auth()->id())
+            ->with(['category', 'items.rawMaterial'])
             ->orderByDesc('date');
         if ($request->filled('category_id')) {
             $q->where('category_id', $request->integer('category_id'));
@@ -42,6 +48,7 @@ class ExpenseWebController extends Controller
     public function create()
     {
         $categories = ExpenseCategory::orderBy('name')->get();
+        $materials = RawMaterial::orderBy('name')->get();
         $vendorSuggestions = Expense::where('created_by', auth()->id())
             ->whereNotNull('vendor')
             ->select('vendor')
@@ -49,25 +56,19 @@ class ExpenseWebController extends Controller
             ->orderBy('vendor')
             ->limit(50)
             ->pluck('vendor');
-        return view('pages.expenses.create', compact('categories','vendorSuggestions'));
+        return view('pages.expenses.create', compact('categories','vendorSuggestions','materials'));
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'date' => ['required','date'],
-            'amount' => ['required','numeric','min:0.01'],
-            'category_id' => ['nullable','exists:expense_categories,id'],
-            'vendor' => ['nullable','string','max:255'],
-            'notes' => ['nullable','string','max:1000'],
-            'attachment' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:5120']
-        ]);
+        $data = $this->validateExpense($request);
+        $items = $data['items'];
+        unset($data['items'], $data['attachment'], $data['amount']);
+
         $data['reference_no'] = $this->generateExpenseRef($data['date']);
-        if ($request->hasFile('attachment')) {
-            $path = $request->file('attachment')->store('public/expense_attachments');
-            $data['attachment_path'] = $path;
-        }
-        Expense::create($data);
+
+        $expense = $this->expenses->create($data, $items, $request->file('attachment'));
+
         return redirect()->route('expenses.index')->with('success', 'Pengeluaran ditambahkan');
     }
 
@@ -77,6 +78,7 @@ class ExpenseWebController extends Controller
             abort(403);
         }
         $categories = ExpenseCategory::orderBy('name')->get();
+        $materials = RawMaterial::orderBy('name')->get();
         $vendorSuggestions = Expense::where('created_by', auth()->id())
             ->whereNotNull('vendor')
             ->select('vendor')
@@ -84,8 +86,8 @@ class ExpenseWebController extends Controller
             ->orderBy('vendor')
             ->limit(50)
             ->pluck('vendor');
-        return view('pages.expenses.edit', compact('expense','categories','vendorSuggestions'));
-        
+        $expense->loadMissing('items.rawMaterial');
+        return view('pages.expenses.edit', compact('expense','categories','vendorSuggestions','materials'));
     }
 
     public function update(Request $request, Expense $expense)
@@ -93,22 +95,12 @@ class ExpenseWebController extends Controller
         if (auth()->user()->roles !== 'admin' && $expense->created_by !== auth()->id()) {
             abort(403);
         }
-        $data = $request->validate([
-            'date' => ['required','date'],
-            'amount' => ['required','numeric','min:0.01'],
-            'category_id' => ['nullable','exists:expense_categories,id'],
-            'vendor' => ['nullable','string','max:255'],
-            'notes' => ['nullable','string','max:1000'],
-            'attachment' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:5120']
-        ]);
-        if ($request->hasFile('attachment')) {
-            if ($expense->attachment_path) {
-                Storage::delete($expense->attachment_path);
-            }
-            $path = $request->file('attachment')->store('public/expense_attachments');
-            $data['attachment_path'] = $path;
-        }
-        $expense->update($data);
+        $data = $this->validateExpense($request, true);
+        $items = $data['items'];
+        unset($data['items'], $data['attachment'], $data['amount']);
+
+        $this->expenses->update($expense, $data, $items, $request->file('attachment'));
+
         return redirect()->route('expenses.index')->with('success', 'Pengeluaran diperbarui');
     }
 
@@ -117,10 +109,7 @@ class ExpenseWebController extends Controller
         if (auth()->user()->roles !== 'admin' && $expense->created_by !== auth()->id()) {
             abort(403);
         }
-        if ($expense->attachment_path) {
-            Storage::delete($expense->attachment_path);
-        }
-        $expense->delete();
+        $this->expenses->delete($expense);
         return redirect()->route('expenses.index')->with('success', 'Pengeluaran dihapus');
     }
 
@@ -133,12 +122,25 @@ class ExpenseWebController extends Controller
         $today = now()->toDateString();
         $newRef = $this->generateExpenseRef($today);
 
-        $new = $expense->replicate(['reference_no', 'created_by', 'updated_by', 'date', 'attachment_path']);
-        $new->date = $today;
-        $new->reference_no = $newRef;
+        $payload = $expense->only(['date','category_id','vendor','notes']);
+        $payload['date'] = $today;
+        $payload['reference_no'] = $newRef;
+
+        $items = $expense->items()->get()->map(function ($item) {
+            return [
+                'raw_material_id' => $item->raw_material_id,
+                'description' => $item->description,
+                'unit' => $item->unit,
+                'qty' => $item->qty,
+                'item_price' => $item->total_cost,
+                'unit_cost' => $item->unit_cost,
+                'notes' => $item->notes,
+            ];
+        })->toArray();
+
+        $new = $this->expenses->create($payload, $items);
         $new->created_by = auth()->id();
         $new->updated_by = auth()->id();
-
         $new->save();
 
         return redirect()->route('expenses.edit', $new)->with('success', 'Pengeluaran berhasil diduplikat. Silakan periksa dan simpan.');
@@ -156,11 +158,48 @@ class ExpenseWebController extends Controller
             $n = (int) substr($last, -4) + 1;
         }
         $ref = $prefix . str_pad((string) $n, 4, '0', STR_PAD_LEFT);
-        // Safety: if somehow exists, bump until unique
         while (Expense::where('reference_no', $ref)->exists()) {
             $n++;
             $ref = $prefix . str_pad((string) $n, 4, '0', STR_PAD_LEFT);
         }
         return $ref;
+    }
+
+    private function validateExpense(Request $request, bool $isUpdate = false): array
+    {
+        $rules = [
+            'date' => ['required','date'],
+            'amount' => ['nullable','numeric','min:0'],
+            'category_id' => ['nullable','exists:expense_categories,id'],
+            'vendor' => ['nullable','string','max:255'],
+            'notes' => ['nullable','string','max:1000'],
+            'attachment' => ['nullable','file','mimes:jpg,jpeg,png,pdf','max:5120'],
+            'items' => ['required','array','min:1'],
+            'items.*.raw_material_id' => ['nullable','exists:raw_materials,id'],
+            'items.*.description' => ['nullable','string','max:255'],
+            'items.*.unit' => ['nullable','string','max:50'],
+            'items.*.qty' => ['required','numeric','min:0.0001'],
+            'items.*.item_price' => ['required','numeric','min:0'],
+            'items.*.unit_cost' => ['nullable','numeric','min:0'],
+            'items.*.notes' => ['nullable','string'],
+        ];
+
+        if ($isUpdate) {
+            $rules['remove_attachment'] = ['nullable','boolean'];
+        }
+
+        $payload = $request->validate($rules);
+
+        $items = $payload['items'] ?? [];
+        $filtered = [];
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $filtered[] = $item;
+        }
+        $payload['items'] = $filtered;
+
+        return $payload;
     }
 }

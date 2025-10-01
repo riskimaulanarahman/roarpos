@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductRecipe;
 use App\Models\ProductRecipeItem;
 use App\Models\RawMaterial;
+use App\Services\RecipeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Collection;
 
 class ProductController extends Controller
 {
@@ -32,7 +35,7 @@ class ProductController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        $categories = \App\Models\Category::where('user_id', $userId)
+        $categories = Category::where('user_id', $userId)
             ->orderBy('name', 'asc')
             ->get();
 
@@ -42,107 +45,55 @@ class ProductController extends Controller
     public function create()
     {
         $userId = auth()->id();
-        $categories = \App\Models\Category::where('user_id', $userId)
+        $categories = Category::where('user_id', $userId)
             ->orderBy('name', 'asc')
             ->get();
-        return view('pages.products.create', compact('categories'));
+        $materials = RawMaterial::orderBy('name')->get();
+
+        return view('pages.products.create', [
+            'categories' => $categories,
+            'materials' => $materials,
+            'product' => null,
+            'recipe' => null,
+        ]);
     }
 
-    // public function store(Request $request)
-    // {
-    //     $request->validate([
-    //         'name' => 'required|min:3|unique:products',
-    //         'price' => 'required|integer',
-    //         'stock' => 'required|integer',
-    //         'category_id' => 'required'
-    //     ]);
-
-    //     $product = new \App\Models\Product;
-    //     $product->name = $request->name;
-    //     $product->price = (int) $request->price;
-    //     $product->stock = (int) $request->stock;
-    //     $product->category_id = $request->category_id;
-    //     if ($request->hasFile('image')) {
-    //         $filename = time() . '.' . $request->image->extension();
-    //         $request->image->storeAs('public/products', $filename);
-    //         $product->image = $filename;
-    //     } else {
-    //         $product->image = env('APP_URL') . '/img/roar-logo.png'; // Path relatif ke gambar default
-    //     }
-    //     $product->save();
-
-    //     return redirect()->route('product.index')->with('success', 'Product successfully created');
-    // }
-
-    public function store(Request $request)
+    public function store(Request $request, RecipeService $recipes)
     {
-        $request->validate([
-            'name' => 'required|min:3|unique:products',
-            'price' => 'required|integer',
-            'stock' => 'required|integer',
-            'category_id' => 'required'
+        $userId = auth()->id();
+        $this->sanitizeRecipeInput($request);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'min:3', 'max:255', Rule::unique('products', 'name')->where(fn($q) => $q->where('user_id', $userId))],
+            'price' => ['required', 'numeric', 'min:0'],
+            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn($q) => $q->where('user_id', $userId))],
+            'image' => ['nullable', 'image', 'max:2048'],
+            'yield_qty' => ['nullable', 'numeric', 'min:0.0001'],
+            'unit' => ['nullable', 'string', 'max:20'],
+            'recipe' => ['nullable', 'array'],
+            'recipe.*.raw_material_id' => ['required', 'integer', Rule::exists('raw_materials', 'id')],
+            'recipe.*.qty_per_yield' => ['required', 'numeric', 'min:0.0001'],
+            'recipe.*.waste_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ], [], [
+            'recipe' => 'resep',
+            'recipe.*.raw_material_id' => 'bahan',
+            'recipe.*.qty_per_yield' => 'takaran',
+            'recipe.*.waste_pct' => 'waste %',
         ]);
 
-        $userId = auth()->id();
+        $recipeItems = collect($validated['recipe'] ?? []);
 
-        $product = new \App\Models\Product;
-        $product->name = $request->name;
-        $product->user_id = $userId;
-        $product->price = (int) $request->price;
-        $product->stock = (int) $request->stock;
-        $product->category_id = $request->category_id;
-
-        if ($request->hasFile('image')) {
-            $filename = time() . '.' . $request->image->extension();
-            // Upload langsung ke public/products
-            $request->image->move(public_path('products'), $filename);
-            $product->image = $filename;
-        } else {
-            $product->image = 'roar-logo.png'; // Nama file gambar default di public/img/
-        }
-
-        $product->save();
-
-        return redirect()->route('product.index')->with('success', 'Product successfully created');
-    }
-
-    public function storeWizard(Request $request)
-    {
-        $userId = auth()->id();
-
-        $rules = [
-            'name' => 'required|min:3|unique:products,name',
-            'price' => 'required|numeric',
-            'stock' => 'required|numeric',
-            'category_id' => 'required',
-            'image' => 'nullable|image|max:2048',
-            'recipe_enabled' => 'sometimes|boolean',
-        ];
-
-        if ($request->boolean('recipe_enabled')) {
-            $rules = array_merge($rules, [
-                'yield_qty' => ['required','numeric','min:0.0001'],
-                'unit' => ['nullable','string','max:20'],
-                'items' => ['required','array','min:1'],
-                'items.*.raw_material_id' => ['required','exists:raw_materials,id'],
-                'items.*.qty_per_yield' => ['required','numeric','min:0.0001'],
-                'items.*.waste_pct' => ['nullable','numeric','min:0','max:100'],
-            ]);
-        }
-
-        $validated = $request->validate($rules);
-
-        $product = DB::transaction(function () use ($request, $userId, $validated) {
-            $product = new \App\Models\Product();
-            $product->name = $validated['name'];
+        $product = DB::transaction(function () use ($request, $validated, $userId, $recipeItems, $recipes) {
+            $product = new Product();
             $product->user_id = $userId;
+            $product->name = $validated['name'];
             $product->price = (float) $validated['price'];
-            $product->stock = (float) $validated['stock'];
-            $product->category_id = $validated['category_id'];
+            $product->category_id = (int) $validated['category_id'];
+            $product->stock = 0; // akan dihitung ulang setelah resep tersimpan
 
             if ($request->hasFile('image')) {
-                $filename = time() . '.' . $request->image->extension();
-                $request->image->move(public_path('products'), $filename);
+                $filename = time() . '.' . $request->file('image')->extension();
+                $request->file('image')->move(public_path('products'), $filename);
                 $product->image = $filename;
             } else {
                 $product->image = 'roar-logo.png';
@@ -150,200 +101,104 @@ class ProductController extends Controller
 
             $product->save();
 
-            if ($request->boolean('recipe_enabled')) {
-                $recipe = ProductRecipe::updateOrCreate(
-                    ['product_id' => $product->id],
-                    [
-                        'yield_qty' => $validated['yield_qty'],
-                        'unit' => $validated['unit'] ?? null,
-                    ]
-                );
-
-                // Reset items
-                $recipe->items()->delete();
-                foreach ($validated['items'] as $i) {
-                    ProductRecipeItem::create([
-                        'product_recipe_id' => $recipe->id,
-                        'raw_material_id' => $i['raw_material_id'],
-                        'qty_per_yield' => $i['qty_per_yield'],
-                        'waste_pct' => $i['waste_pct'] ?? 0,
-                    ]);
-                }
+            $unit = array_key_exists('unit', $validated) ? trim((string) $validated['unit']) : null;
+            if ($unit === '') {
+                $unit = null;
             }
+
+            $yieldQty = $validated['yield_qty'] ?? null;
+
+            $this->syncRecipe($product, $yieldQty, $unit, $recipeItems);
+            $this->refreshProductStats($product, $recipes);
 
             return $product;
         });
 
-        return redirect()->route('product.index')->with('success', 'Product and optional recipe created successfully');
+        return redirect()->route('product.index')->with('success', 'Produk berhasil dibuat.');
     }
 
     public function edit($id)
     {
-        $product = \App\Models\Product::findOrFail($id);
         $userId = auth()->id();
-        $categories = \App\Models\Category::where('user_id', $userId)
+        $product = Product::where('user_id', $userId)->findOrFail($id);
+        $categories = Category::where('user_id', $userId)
             ->orderBy('name', 'asc')
             ->get();
-        return view('pages.products.edit', compact('product', 'categories'));
+        $materials = RawMaterial::orderBy('name')->get();
+        $recipe = ProductRecipe::with('items')->where('product_id', $product->id)->first();
+
+        return view('pages.products.edit', [
+            'product' => $product,
+            'categories' => $categories,
+            'materials' => $materials,
+            'recipe' => $recipe,
+        ]);
     }
 
-    // public function update(Request $request, $id)
-    // {
-    //     $request->validate([
-    //         'name' => 'required',
-    //         'price' => 'required|numeric',
-    //         'stock' => 'required|numeric',
-    //         'category_id' => 'required',
-    //     ]);
-    //     // dd($request->all());
-    //     $product = Product::find($id);
-    //     $product->name = $request->name;
-    //     $product->price = $request->price;
-    //     $product->category_id = $request->category_id;
-    //     $product->stock = $request->stock;
-
-
-    //     if ($request->hasFile('image'))  {
-    //         // dd($product->image);
-
-    //         // if ($request->hasFile('image')) {
-
-    //             // Hapus gambar lama jika ada
-    //             Storage::delete('public/products/' . $product->image);
-    //             $filename = time() . '.' . $request->image->extension();
-    //             $request->image->storeAs('public/products', $filename);
-    //             $product->image = $filename;
-    //         // }
-    //     }
-    //     // if ($request->hasFile('image')) {
-
-    //     //     // Simpan file gambar yang baru diunggah
-    //     //     $filename = time() . '.' . $request->image->extension();
-    //     //     $request->image->storeAs('public/products', $filename);
-    //     //     $product->image = $filename;
-    //     //     // $image = $request->file('image');
-    //     //     // $image->storeAs('public/products', $product->id . '.' . $image->getClientOriginalExtension());
-    //     //     // $product->image = 'storage/products/' . $product->id . '.' . $image->getClientOriginalExtension();
-    //     //     // $product->save();
-    //     // }
-    //     $product->save();
-    //     return redirect()->route('product.index')->with('success', 'Product successfully updated');
-    // }
-
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, RecipeService $recipes)
     {
-        $request->validate([
-            'name' => 'required',
-            'price' => 'required|numeric',
-            'stock' => 'required|numeric',
-            'category_id' => 'required',
+        $userId = auth()->id();
+        $product = Product::where('user_id', $userId)->findOrFail($id);
+
+        $this->sanitizeRecipeInput($request);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'min:3', 'max:255', Rule::unique('products', 'name')->where(fn($q) => $q->where('user_id', $userId))->ignore($product->id)],
+            'price' => ['required', 'numeric', 'min:0'],
+            'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where(fn($q) => $q->where('user_id', $userId))],
+            'image' => ['nullable', 'image', 'max:2048'],
+            'yield_qty' => ['nullable', 'numeric', 'min:0.0001'],
+            'unit' => ['nullable', 'string', 'max:20'],
+            'recipe' => ['nullable', 'array'],
+            'recipe.*.raw_material_id' => ['required', 'integer', Rule::exists('raw_materials', 'id')],
+            'recipe.*.qty_per_yield' => ['required', 'numeric', 'min:0.0001'],
+            'recipe.*.waste_pct' => ['nullable', 'numeric', 'min:0', 'max:100'],
+        ], [], [
+            'recipe' => 'resep',
+            'recipe.*.raw_material_id' => 'bahan',
+            'recipe.*.qty_per_yield' => 'takaran',
+            'recipe.*.waste_pct' => 'waste %',
         ]);
 
-        $product = Product::find($id);
-        $product->name = $request->name;
-        $product->price = $request->price;
-        $product->category_id = $request->category_id;
-        $product->stock = $request->stock;
+        $recipeItems = collect($validated['recipe'] ?? []);
 
-        if ($request->hasFile('image')) {
-            // Hapus gambar lama (kecuali gambar default)
-            if ($product->image && $product->image != 'roar-logo.png') {
-                $oldImagePath = public_path('products/' . $product->image);
-                if (file_exists($oldImagePath)) {
-                    unlink($oldImagePath);
-                }
-            }
-
-            // Upload gambar baru
-            $filename = time() . '.' . $request->image->extension();
-            $request->image->move(public_path('products'), $filename);
-            $product->image = $filename;
-        }
-
-        $product->save();
-
-        return redirect()->route('product.index')->with('success', 'Product successfully updated');
-    }
-
-    public function updateWizard(Request $request, Product $product)
-    {
-        $rules = [
-            'name' => 'required|min:1|unique:products,name,' . $product->id,
-            'price' => 'required|numeric',
-            'stock' => 'required|numeric',
-            'category_id' => 'required',
-            'image' => 'nullable|image|max:2048',
-            'recipe_enabled' => 'sometimes|boolean',
-        ];
-
-        if ($request->boolean('recipe_enabled')) {
-            $rules = array_merge($rules, [
-                'yield_qty' => ['required','numeric','min:0.0001'],
-                'unit' => ['nullable','string','max:20'],
-                'items' => ['required','array','min:1'],
-                'items.*.raw_material_id' => ['required','exists:raw_materials,id'],
-                'items.*.qty_per_yield' => ['required','numeric','min:0.0001'],
-                'items.*.waste_pct' => ['nullable','numeric','min:0','max:100'],
-            ]);
-        }
-
-        $validated = $request->validate($rules);
-
-        DB::transaction(function () use ($request, $product, $validated) {
+        DB::transaction(function () use ($request, $product, $validated, $recipeItems, $recipes) {
             $product->name = $validated['name'];
             $product->price = (float) $validated['price'];
-            $product->category_id = $validated['category_id'];
-            $product->stock = (float) $validated['stock'];
+            $product->category_id = (int) $validated['category_id'];
 
             if ($request->hasFile('image')) {
-                if ($product->image && $product->image != 'roar-logo.png') {
-                    $oldImagePath = public_path('products/' . $product->image);
-                    if (file_exists($oldImagePath)) {
-                        @unlink($oldImagePath);
+                if ($product->image && $product->image !== 'roar-logo.png') {
+                    $oldPath = public_path('products/' . $product->image);
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
                     }
                 }
-                $filename = time() . '.' . $request->image->extension();
-                $request->image->move(public_path('products'), $filename);
+                $filename = time() . '.' . $request->file('image')->extension();
+                $request->file('image')->move(public_path('products'), $filename);
                 $product->image = $filename;
             }
 
             $product->save();
 
-            if ($request->boolean('recipe_enabled')) {
-                $recipe = ProductRecipe::updateOrCreate(
-                    ['product_id' => $product->id],
-                    [
-                        'yield_qty' => $validated['yield_qty'],
-                        'unit' => $validated['unit'] ?? null,
-                    ]
-                );
-                $recipe->items()->delete();
-                foreach ($validated['items'] as $i) {
-                    ProductRecipeItem::create([
-                        'product_recipe_id' => $recipe->id,
-                        'raw_material_id' => $i['raw_material_id'],
-                        'qty_per_yield' => $i['qty_per_yield'],
-                        'waste_pct' => $i['waste_pct'] ?? 0,
-                    ]);
-                }
-            } else {
-                // If recipe disabled, remove existing recipe and items (optional)
-                $existing = ProductRecipe::where('product_id', $product->id)->first();
-                if ($existing) {
-                    $existing->items()->delete();
-                    $existing->delete();
-                }
+            $unit = array_key_exists('unit', $validated) ? trim((string) $validated['unit']) : null;
+            if ($unit === '') {
+                $unit = null;
             }
+
+            $yieldQty = $validated['yield_qty'] ?? null;
+
+            $this->syncRecipe($product, $yieldQty, $unit, $recipeItems);
+            $this->refreshProductStats($product, $recipes);
         });
 
-        return redirect()->route('product.index')->with('success', 'Product and optional recipe updated successfully');
+        return redirect()->route('product.index')->with('success', 'Produk berhasil diperbarui.');
     }
-
 
     public function destroy($id)
     {
-        $product = \App\Models\Product::findOrFail($id);
-        // Delete image file from public/products if not default
+        $userId = auth()->id();
+        $product = Product::where('user_id', $userId)->findOrFail($id);
         if ($product->image && $product->image !== 'roar-logo.png') {
             $path = public_path('products/' . $product->image);
             if (file_exists($path)) {
@@ -351,6 +206,68 @@ class ProductController extends Controller
             }
         }
         $product->delete();
-        return redirect()->route('product.index')->with('success', 'Product successfully deleted');
+
+        return redirect()->route('product.index')->with('success', 'Produk berhasil dihapus.');
+    }
+
+    private function sanitizeRecipeInput(Request $request): void
+    {
+        $raw = $request->input('recipe', []);
+        $cleaned = [];
+        foreach ($raw as $row) {
+            $materialId = (int) ($row['raw_material_id'] ?? 0);
+            $qty = isset($row['qty_per_yield']) ? (float) $row['qty_per_yield'] : null;
+            if ($materialId > 0 && $qty !== null && $qty > 0) {
+                $cleaned[] = [
+                    'raw_material_id' => $materialId,
+                    'qty_per_yield' => $qty,
+                    'waste_pct' => isset($row['waste_pct']) ? (float) $row['waste_pct'] : 0.0,
+                ];
+            }
+        }
+        $request->merge(['recipe' => $cleaned]);
+    }
+
+    private function syncRecipe(Product $product, ?float $yieldQty, ?string $unit, Collection $items): void
+    {
+        $items = $items->filter(function (array $item) {
+            return !empty($item['raw_material_id']) && isset($item['qty_per_yield']);
+        })->values();
+
+        if ($items->isEmpty()) {
+            $existing = ProductRecipe::where('product_id', $product->id)->first();
+            if ($existing) {
+                $existing->items()->delete();
+                $existing->delete();
+            }
+            return;
+        }
+
+        $recipe = ProductRecipe::updateOrCreate(
+            ['product_id' => $product->id],
+            [
+                'yield_qty' => $yieldQty ?? 1,
+                'unit' => $unit ?: null,
+            ]
+        );
+
+        $recipe->items()->delete();
+        foreach ($items as $item) {
+            ProductRecipeItem::create([
+                'product_recipe_id' => $recipe->id,
+                'raw_material_id' => $item['raw_material_id'],
+                'qty_per_yield' => $item['qty_per_yield'],
+                'waste_pct' => $item['waste_pct'] ?? 0,
+            ]);
+        }
+    }
+
+    private function refreshProductStats(Product $product, RecipeService $recipes): void
+    {
+        $product->refresh();
+        $product->cost_price = $recipes->calculateCogs($product);
+        $estimate = $recipes->estimateBuildableUnits($product);
+        $product->stock = $estimate !== null ? max(0, (int) $estimate) : 0;
+        $product->save();
     }
 }

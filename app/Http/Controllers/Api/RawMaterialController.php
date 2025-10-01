@@ -42,7 +42,10 @@ class RawMaterialController extends Controller
     public function store(RawMaterialStoreRequest $request)
     {
         Gate::authorize('inventory.manage');
-        $material = RawMaterial::create($request->validated());
+        $data = $request->validated();
+        $data['min_stock'] = $data['min_stock'] ?? null;
+        $data['unit_cost'] = 0;
+        $material = RawMaterial::create($data);
         return (new RawMaterialResource($material))
             ->additional(['message' => 'Raw material created']);
     }
@@ -51,9 +54,35 @@ class RawMaterialController extends Controller
     {
         Gate::authorize('inventory.manage');
         $material = RawMaterial::findOrFail($id);
-        $material->update($request->validated());
+        $data = $request->validated();
+        if (! array_key_exists('min_stock', $data)) {
+            $data['min_stock'] = $material->min_stock;
+        }
+        $material->update($data);
         return (new RawMaterialResource($material))
             ->additional(['message' => 'Raw material updated']);
+    }
+
+    public function destroy(int $id)
+    {
+        Gate::authorize('inventory.manage');
+        $material = RawMaterial::findOrFail($id);
+
+        if ($material->expenseItems()->exists()) {
+            return response()->json([
+                'message' => 'Raw material is linked to expense items and cannot be deleted.',
+            ], 422);
+        }
+
+        if ($material->recipeItems()->exists()) {
+            return response()->json([
+                'message' => 'Raw material is used in product recipes and cannot be deleted.',
+            ], 422);
+        }
+
+        $material->delete();
+
+        return response()->json(['message' => 'Raw material deleted']);
     }
 
     public function adjustStock(RawMaterialAdjustStockRequest $request, int $id)
@@ -65,14 +94,6 @@ class RawMaterialController extends Controller
         $movement = $this->inventory->adjustStock($material, $qty, $qty >= 0 ? 'adjustment' : 'adjustment', $unitCost, 'manual_adjustment', $material->id, $request->input('notes'));
         return (new RawMaterialMovementResource($movement))
             ->additional(['message' => 'Stock adjusted']);
-    }
-
-    public function movements(int $id)
-    {
-        Gate::authorize('inventory.manage');
-        $material = RawMaterial::findOrFail($id);
-        $movements = $material->movements()->orderBy('occurred_at','desc')->paginate(30);
-        return RawMaterialMovementResource::collection($movements);
     }
 
     public function purchase(RawMaterialPurchaseRequest $request, int $id)

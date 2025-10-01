@@ -39,9 +39,11 @@ class CustomVerifyEmail extends BaseVerifyEmail implements ShouldQueue
 
         return (new MailMessage)
             ->subject('Verifikasi Email Akun Anda')
-            ->greeting('Halo ' . $notifiable->name)
-            ->line('Terima kasih telah mendaftar. Klik tombol di bawah untuk memverifikasi email Anda.')
-            ->action('Aktifkan Akun', $url)
-            ->line('Link ini berlaku 60 menit.');
+            ->markdown('emails.verify_email', [
+                'appName' => config('app.name'),
+                'logoUrl' => asset('img/toga-gold-ts.png'),
+                'verificationUrl' => $url,
+                'userName' => $notifiable->name,
+            ]);
     }
 }

@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\RawMaterial;
 use App\Models\RawMaterialMovement;
 use App\Services\InventoryService;
+use App\Models\Expense;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 
 class RawMaterialWebController extends Controller
 {
@@ -25,45 +27,58 @@ class RawMaterialWebController extends Controller
 
     public function create()
     {
-        return view('pages.raw_materials.create');
+        $nameOptions = $this->expenseNameOptions();
+        return view('pages.raw_materials.create', compact('nameOptions'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'sku' => ['required','string','max:50','unique:raw_materials,sku'],
+            'sku' => ['nullable','string','max:50','unique:raw_materials,sku'],
             'name' => ['required','string','max:255'],
             'unit' => ['required','in:g,ml,pcs,kg,l'],
-            'unit_cost' => ['required','numeric','min:0'],
-            'stock_qty' => ['nullable','numeric','min:0'],
             'min_stock' => ['nullable','numeric','min:0'],
         ]);
+        $data['stock_qty'] = 0;
+        $data['unit_cost'] = 0;
+        $data['min_stock'] = $data['min_stock'] ?? null;
         RawMaterial::create($data);
         return redirect()->route('raw-materials.index')->with('success','Bahan dibuat');
     }
 
     public function edit(RawMaterial $raw_material)
     {
-        return view('pages.raw_materials.edit', ['material' => $raw_material]);
+        $nameOptions = $this->expenseNameOptions();
+        return view('pages.raw_materials.edit', ['material' => $raw_material, 'nameOptions' => $nameOptions]);
     }
 
     public function update(Request $request, RawMaterial $raw_material)
     {
         $data = $request->validate([
-            'sku' => ['required','string','max:50','unique:raw_materials,sku,'.$raw_material->id],
+            'sku' => ['nullable','string','max:50','unique:raw_materials,sku,'.$raw_material->id],
             'name' => ['required','string','max:255'],
             'unit' => ['required','in:g,ml,pcs,kg,l'],
-            'unit_cost' => ['required','numeric','min:0'],
-            'stock_qty' => ['required','numeric','min:0'],
-            'min_stock' => ['required','numeric','min:0'],
+            'min_stock' => ['nullable','numeric','min:0'],
         ]);
+        if (! array_key_exists('min_stock', $data)) {
+            $data['min_stock'] = $raw_material->min_stock;
+        }
         $raw_material->update($data);
         return redirect()->route('raw-materials.index')->with('success','Bahan diperbarui');
     }
 
     public function adjustForm(RawMaterial $raw_material)
     {
-        return view('pages.raw_materials.adjust_stock', ['material' => $raw_material]);
+        $expenseSources = $this->expenseSources();
+        $lastMovement = RawMaterialMovement::where('raw_material_id', $raw_material->id)
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->first();
+        return view('pages.raw_materials.adjust_stock', [
+            'material' => $raw_material,
+            'expenseSources' => $expenseSources,
+            'lastMovement' => $lastMovement,
+        ]);
     }
 
     public function adjust(Request $request, RawMaterial $raw_material, InventoryService $inventory)
@@ -74,16 +89,77 @@ class RawMaterialWebController extends Controller
             'notes' => ['nullable','string'],
         ]);
         $inventory->adjustStock($raw_material, (float)$data['qty_change'], 'adjustment', $data['unit_cost'] ?? null, 'manual_adjustment', $raw_material->id, $data['notes'] ?? null);
-        return redirect()->route('raw-materials.movements', $raw_material->id)->with('success','Stok diperbarui');
+        return redirect()->route('raw-materials.index')->with('success','Stok diperbarui');
     }
 
-    public function movements(RawMaterial $raw_material)
+    public function destroy(RawMaterial $raw_material)
     {
-        $movements = $raw_material->movements()->orderByDesc('occurred_at')->paginate(30);
-        return view('pages.raw_materials.movements', [
-            'material' => $raw_material,
-            'movements' => $movements,
-        ]);
+        if ($raw_material->expenseItems()->exists()) {
+            return redirect()->route('raw-materials.index')->with('error', 'Bahan tidak dapat dihapus karena sudah terhubung dengan detail pengeluaran.');
+        }
+
+        if ($raw_material->recipeItems()->exists()) {
+            return redirect()->route('raw-materials.index')->with('error', 'Bahan tidak dapat dihapus karena dipakai pada resep produk.');
+        }
+
+        try {
+            $raw_material->delete();
+        } catch (QueryException $e) {
+            return redirect()->route('raw-materials.index')->with('error', 'Bahan tidak dapat dihapus saat ini.');
+        }
+
+        return redirect()->route('raw-materials.index')->with('success', 'Bahan dihapus.');
+    }
+
+    private function expenseNameOptions()
+    {
+        $query = Expense::query()->whereNotNull('vendor');
+        if (auth()->check() && auth()->user()->roles !== 'admin') {
+            $query->where('created_by', auth()->id());
+        }
+
+        $vendors = $query
+            ->select('vendor')
+            ->distinct()
+            ->orderBy('vendor')
+            ->limit(100)
+            ->pluck('vendor');
+
+        $notes = Expense::query()
+            ->when(auth()->check() && auth()->user()->roles !== 'admin', function ($q) {
+                $q->where('created_by', auth()->id());
+            })
+            ->whereNotNull('notes')
+            ->select('notes')
+            ->distinct()
+            ->orderBy('notes')
+            ->limit(100)
+            ->pluck('notes');
+
+        return $vendors->merge($notes)
+            ->filter()
+            ->unique()
+            ->values();
+    }
+
+    private function expenseSources()
+    {
+        $query = Expense::query()
+            ->where(function ($q) {
+                $q->whereNotNull('vendor')->orWhereNotNull('notes');
+            });
+
+        if (auth()->check() && auth()->user()->roles !== 'admin') {
+            $query->where('created_by', auth()->id());
+        }
+
+        return $query
+            ->orderByDesc('date')
+            ->limit(200)
+            ->get(['id','vendor','notes','amount','date'])
+            ->unique(function ($expense) {
+                return strtolower(trim(($expense->vendor ?? '') . '|' . ($expense->notes ?? '')));
+            })
+            ->values();
     }
 }
-

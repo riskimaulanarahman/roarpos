@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRecipeStoreRequest;
-use App\Http\Requests\ProduceRequest;
 use App\Models\Product;
 use App\Models\ProductRecipe;
 use App\Models\ProductRecipeItem;
@@ -52,21 +51,15 @@ class ProductRecipeController extends Controller
 
             // Update HPP (cost_price) pada products dari resep
             $product = Product::findOrFail($id);
-            $product->cost_price = app(\App\Services\RecipeService::class)->calculateCogs($product);
+            $product->cost_price = $this->recipes->calculateCogs($product);
+            $estimate = $this->recipes->estimateBuildableUnits($product);
+            $product->stock = max(0, (int) ($estimate ?? 0));
             $product->save();
 
             return $recipe;
         });
 
         return response()->json(['message' => 'Recipe saved', 'data' => $recipe]);
-    }
-
-    public function produce(ProduceRequest $request, int $id)
-    {
-        Gate::authorize('inventory.manage');
-        $product = Product::findOrFail($id);
-        $result = $this->recipes->produce($product, (int) $request->input('batches'), $request->input('notes'));
-        return response()->json(['message' => 'Production completed', 'data' => $result]);
     }
 
     public function cogs(int $id)

@@ -7,12 +7,14 @@
   <section class="section">
     <div class="section-header">
       <h1>Resep: {{ $product->name }}</h1>
-      <div class="section-header-button">
-        <a href="{{ route('product-recipes.produce-form',$product) }}" class="btn btn-success">Produksi</a>
-      </div>
     </div>
     <div class="section-body">
       @include('layouts.alert')
+      @if($materials->isEmpty())
+        <div class="alert alert-warning">
+          Belum ada bahan baku yang memiliki pengeluaran tercatat. Silakan input pengeluaran bahan baku terlebih dahulu agar dapat disusun resep produk.
+        </div>
+      @endif
       @include('components.help_panel', [
         'id' => 'help-recipe-edit',
         'title' => 'Panduan singkat • Resep Produk',
@@ -20,7 +22,6 @@
           'Isi Yield Qty dan Unit.',
           'Tambahkan bahan (Bahan Pokok), isi Qty per Yield dan Waste % (opsional).',
           'Simpan. HPP per unit dihitung otomatis dari rata-rata biaya bahan saat ini.',
-          'Gunakan menu Produksi untuk mengonsumsi stok bahan sesuai resep.',
         ],
       ])
       <div class="row">
@@ -91,4 +92,3 @@
   </section>
 </div>
 @endsection
-

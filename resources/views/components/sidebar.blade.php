@@ -25,24 +25,11 @@
                     </a>
                 </li>
 
-{{-- 
-                <li class="nav-item dropdown {{ (Request::is('income*') || Request::is('expenses*')) ? 'active' : '' }}">
-                    <a href="#" class="nav-link has-dropdown">
-                        <i class="fas fa-dollar"></i><span>Finance</span>
+                <li class="{{ Request::is('expenses*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('expenses.index') }}">
+                        <i class="fas fa-arrow-up"></i> <span>Uang Keluar</span>
                     </a>
-                    <ul class="dropdown-menu">
-                        <li class="{{ Request::is('income*') ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('income.index') }}">
-                                <i class="fas fa-arrow-down"></i> <span>Uang Masuk</span>
-                            </a>
-                        </li>
-                        <li class="{{ Request::is('expenses*') ? 'active' : '' }}">
-                            <a class="nav-link" href="{{ route('expenses.index') }}">
-                                <i class="fas fa-arrow-up"></i> <span>Uang Keluar</span>
-                            </a>
-                        </li>
-                    </ul>
-                </li> --}}
+                </li>
 
                 @php($invOpen = Request::is('raw-materials*') || Request::is('products/*/recipe*') || Request::is('products/*/produce*'))
                 <li class="nav-item dropdown {{ $invOpen ? 'active' : '' }}">
@@ -118,6 +105,12 @@
                     </a>
                 </li>
 
+                <li class="{{ Request::is('expenses*') ? 'active' : '' }}">
+                    <a class="nav-link" href="{{ route('expenses.index') }}">
+                        <i class="fas fa-arrow-up"></i> <span>Uang Keluar</span>
+                    </a>
+                </li>
+
                 @php($invOpen = Request::is('raw-materials*') || Request::is('products/*/recipe*') || Request::is('products/*/produce*'))
                 <li class="nav-item dropdown {{ $invOpen ? 'active' : '' }}">
                     <a href="#" class="nav-link has-dropdown {{ $invOpen ? 'active' : '' }}">
@@ -129,11 +122,11 @@
                                 <i class="fas fa-flask"></i> <span>Bahan Baku</span>
                             </a>
                         </li>
-                        <li>
+                        {{-- <li>
                             <a class="nav-link" href="{{ route('product.index') }}">
                                 <i class="fas fa-utensils"></i> <span>Resep Produk</span>
                             </a>
-                        </li>
+                        </li> --}}
                     </ul>
                 </li>
 

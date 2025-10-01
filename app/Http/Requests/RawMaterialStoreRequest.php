@@ -11,16 +11,23 @@ class RawMaterialStoreRequest extends FormRequest
         return auth()->check();
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('sku') && trim((string) $this->input('sku')) === '') {
+            $this->merge(['sku' => null]);
+        }
+        if ($this->has('min_stock') && $this->input('min_stock') === '') {
+            $this->merge(['min_stock' => null]);
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'sku' => ['required','string','max:50','unique:raw_materials,sku'],
+            'sku' => ['nullable','string','max:50','unique:raw_materials,sku'],
             'name' => ['required','string','max:255'],
             'unit' => ['required','in:g,ml,pcs,kg,l'],
-            'unit_cost' => ['required','numeric','min:0'],
-            'stock_qty' => ['nullable','numeric','min:0'],
             'min_stock' => ['nullable','numeric','min:0'],
         ];
     }
 }
-

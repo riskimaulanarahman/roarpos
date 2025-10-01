@@ -28,6 +28,14 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/cashier/status', [\App\Http\Controllers\Api\CashierSessionController::class, 'status']);
+    Route::post('/cashier/open', [\App\Http\Controllers\Api\CashierSessionController::class, 'open']);
+    Route::post('/cashier/close', [\App\Http\Controllers\Api\CashierSessionController::class, 'close']);
+    Route::get('/cashier/reports', [\App\Http\Controllers\Api\CashierSessionController::class, 'reports']);
+    Route::post('/cashier/reports/{report}/resend-email', [\App\Http\Controllers\Api\CashierSessionController::class, 'resendEmail']);
+});
+
 Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register']);
 Route::post('/email/resend', [\App\Http\Controllers\Api\AuthController::class, 'resendVerification'])->name('verification.resend');
 
@@ -64,7 +72,6 @@ Route::delete('/categories/{id}', [App\Http\Controllers\Api\CategoryController::
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products/{id}/recipe', [App\Http\Controllers\Api\ProductRecipeController::class, 'showRecipe']);
     Route::post('/products/{id}/recipe', [App\Http\Controllers\Api\ProductRecipeController::class, 'storeRecipe']);
-    Route::post('/products/{id}/produce', [App\Http\Controllers\Api\ProductRecipeController::class, 'produce']);
     Route::get('/products/{id}/cogs', [App\Http\Controllers\Api\ProductRecipeController::class, 'cogs']);
 });
 
@@ -108,7 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/raw-materials', [App\Http\Controllers\Api\RawMaterialController::class, 'index']);
     Route::post('/raw-materials', [App\Http\Controllers\Api\RawMaterialController::class, 'store']);
     Route::put('/raw-materials/{id}', [App\Http\Controllers\Api\RawMaterialController::class, 'update']);
-    Route::get('/raw-materials/{id}/movements', [App\Http\Controllers\Api\RawMaterialController::class, 'movements']);
+    Route::delete('/raw-materials/{id}', [App\Http\Controllers\Api\RawMaterialController::class, 'destroy']);
     Route::post('/raw-materials/{id}/adjust', [App\Http\Controllers\Api\RawMaterialController::class, 'adjustStock']);
     Route::post('/raw-materials/{id}/purchase', [App\Http\Controllers\Api\RawMaterialController::class, 'purchase']);
     Route::post('/raw-materials/{id}/stock-out', [App\Http\Controllers\Api\RawMaterialController::class, 'stockOut']);
@@ -131,4 +138,10 @@ Route::prefix('sync')->middleware('auth:sanctum')->group(function () {
     Route::post('/orders/batch', [App\Http\Controllers\Api\SyncController::class, 'batchSyncOrders']);
     Route::get('/status', [App\Http\Controllers\Api\SyncController::class, 'getSyncStatus']);
     Route::post('/resolve-conflicts', [App\Http\Controllers\Api\SyncController::class, 'resolveConflicts']);
+});
+
+//report summary page
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/reports/summary', [\App\Http\Controllers\Api\ReportController::class, 'summary']);
+    Route::get('/reports/product-sales', [\App\Http\Controllers\Api\ReportController::class, 'productSales']);
 });

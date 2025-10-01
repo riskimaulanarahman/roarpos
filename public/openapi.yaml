@@ -3,7 +3,7 @@ info:
   title: Roar POS API - Enhancements
   version: 1.0.0
   description: |
-    API untuk modul Pemasukan/Pengeluaran, Bahan Pokok & Stok, Resep Produk & Produksi (HPP), Manajemen Karyawan & Absensi.
+    API untuk modul Pemasukan/Pengeluaran, Bahan Pokok & Stok, Resep Produk (HPP), Manajemen Karyawan & Absensi.
 servers:
   - url: /api
 paths:
@@ -273,21 +273,6 @@ paths:
                       raw_material_id: { type: integer }
                       qty_per_yield: { type: number }
                       waste_pct: { type: number }
-      responses:
-        '200': { description: OK }
-  /products/{id}/produce:
-    post:
-      summary: Produksi batch
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [batches]
-              properties:
-                batches: { type: integer }
-                notes: { type: string }
       responses:
         '200': { description: OK }
   /products/{id}/cogs:

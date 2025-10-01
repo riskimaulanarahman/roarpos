@@ -13,9 +13,9 @@
         'id' => 'help-raw-create',
         'title' => 'Panduan singkat • Bahan Pokok',
         'items' => [
-          'Isi SKU, Nama, dan Satuan. Jika mengisi stok awal, isi juga Avg Cost (harga/unit) agar HPP awal akurat.',
-          'Untuk pembelian/penambahan stok berikutnya gunakan menu <em>Adjust Stok</em> dan isi Unit Cost saat Qty positif.',
-          'Tampilan angka dibulatkan 2 desimal. Perhitungan internal tetap presisi.',
+          'Isi SKU (opsional), Nama, dan Satuan. Jika dikosongkan, SKU akan dibuat otomatis.',
+          'Stok awal dimulai dari 0 dan akan bertambah dari transaksi Uang Keluar atau penyesuaian stok.',
+          'Gunakan menu <em>Adjust Stok</em> untuk stok opname atau koreksi fisik.',
         ],
       ])
       <div class="row">
@@ -25,12 +25,12 @@
               @csrf
               <div class="card-body">
                 <div class="form-group">
-                  <label>SKU</label>
-                  <input type="text" name="sku" class="form-control" required>
+                  <label>SKU <span class="text-muted">(opsional)</span></label>
+                  <input type="text" name="sku" class="form-control" value="{{ old('sku') }}" placeholder="Kosongkan untuk auto-generate">
                 </div>
                 <div class="form-group">
                   <label>Nama</label>
-                  <input type="text" name="name" class="form-control" required>
+                  <input type="text" name="name" class="form-control" list="expense-name-options" value="{{ old('name') }}" required>
                 </div>
                 <div class="form-group">
                   <label>Satuan</label>
@@ -42,17 +42,24 @@
                     <option value="l">l</option>
                   </select>
                 </div>
+                @php
+                    $oldMinStock = old('min_stock');
+                    $minStockValue = ($oldMinStock === null || $oldMinStock === '') ? '' : number_format((float) $oldMinStock, 1, '.', '');
+                @endphp
                 <div class="form-group">
-                  <label>Avg Cost</label>
-                  <input type="number" step="0.0001" name="unit_cost" class="form-control" required>
+                  <label>Harga</label>
+                  <div class="form-control-plaintext">0,0 (otomatis)</div>
+                  <small class="form-text text-muted">Harga mengikuti transaksi Uang Keluar terkait pembelian bahan.</small>
                 </div>
+                                <div class="form-group mb-0">
+                                    <label>Stok</label>
+                                    <div class="form-control-plaintext">0 (otomatis)</div>
+                                    <small class="form-text text-muted">Stok akan bertambah ketika pengeluaran bahan dicatat atau melalui menu Adjust Stok.</small>
+                                </div>
                 <div class="form-group">
-                  <label>Stock</label>
-                  <input type="number" step="0.0001" name="stock_qty" class="form-control">
-                </div>
-                <div class="form-group">
-                  <label>Min Stock</label>
-                  <input type="number" step="0.0001" name="min_stock" class="form-control">
+                  <label>Stok Minimum</label>
+                  <input type="number" step="0.1" name="min_stock" class="form-control" value="{{ $minStockValue }}">
+                  <small class="form-text text-muted">Isi nilai ini untuk menyalakan notifikasi ketika stok turun di bawah batas.</small>
                 </div>
               </div>
               <div class="card-footer text-right">
@@ -63,7 +70,19 @@
         </div>
       </div>
     </div>
+    <datalist id="expense-name-options">
+      @foreach($nameOptions ?? [] as $name)
+        <option value="{{ $name }}"></option>
+      @endforeach
+    </datalist>
   </section>
 </div>
 @endsection
 
+@push('scripts')
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // No additional behaviour needed on create form.
+  });
+</script>
+@endpush
