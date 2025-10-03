@@ -331,10 +331,12 @@ class ReportController extends Controller
             'total_quantity' => (int) $rows->sum('quantity'),
             'total_revenue' => (int) $rows->sum('total_price'),
             'items' => $rows->map(function ($r) {
+                $createdAt = $r->created_at ? Carbon::parse($r->created_at, config('app.timezone')) : null;
                 return [
                     'order_id' => $r->order_id,
                     'transaction_number' => $r->transaction_number,
-                    'created_at' => (string) $r->created_at,
+                    'created_at' => $createdAt?->format('Y-m-d H:i:s'),
+                    'created_at_iso' => $createdAt?->toIso8601String(),
                     'payment_method' => $r->payment_method,
                     'product_name' => $r->product_name,
                     'quantity' => (int) $r->quantity,

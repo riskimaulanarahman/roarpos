@@ -249,7 +249,20 @@
     <script src="{{ asset('library/select2/dist/js/select2.min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        const userLocale = navigator.language || navigator.userLanguage || 'en';
+        if (typeof moment === 'function' && typeof moment.locale === 'function') {
+            moment.locale(userLocale);
+        }
+
         function parseCurrency(str){ if(!str) return 0; return parseInt(String(str).replace(/[^0-9\-]/g,'')) || 0; }
+        function formatDateTime(value){
+            if(!value) return '-';
+            if(typeof moment !== 'function') return value;
+            let parsed = moment.parseZone(value);
+            if(!parsed.isValid()){ parsed = moment(value); }
+            if(!parsed.isValid()) return value;
+            return parsed.local().format('LLL');
+        }
         let categoryChart;
         const catData = @json($chart ?? null);
         const CAT_SELECTED = @json($categoryId ?? []);
@@ -360,7 +373,7 @@
 
             const rows = (payload.items||[]).map(it=>[
                 (it.transaction_number || it.order_id || ''),
-                (it.created_at||'').substring(0,19),
+                formatDateTime(it.created_at_iso || it.created_at),
                 (it.product_name||'-'),
                 formatIDR(it.price||0),
                 (it.quantity||0),
@@ -388,7 +401,7 @@
                     (payload.items||[]).forEach(it=>{
                         const tr=document.createElement('tr');
                         tr.innerHTML = `<td>${it.transaction_number || it.order_id}</td>
-                                        <td>${(it.created_at||'').substring(0,19)}</td>
+                                        <td>${formatDateTime(it.created_at_iso || it.created_at)}</td>
                                         <td>${it.product_name||'-'}</td>
                                         <td class=\"text-center\">${formatIDR(it.price||0)}</td>
                                         <td class=\"text-center\">${it.quantity||0}</td>

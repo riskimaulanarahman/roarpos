@@ -234,7 +234,13 @@
                                                 @forelse ($orders as $order)
                                                     <tr>
                                                         <td data-date="{{ optional($order->created_at)->format('Y-m-d') }}">
-                                                            <a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">{{ $order->transaction_time }}</a>
+                                                            @php($trxIso = optional($order->transaction_time)->toIso8601String())
+                                                            <a href="#"
+                                                               class="js-order-details js-transaction-time-display"
+                                                               data-url="{{ route('order.details_json', $order->id) }}"
+                                                               data-time="{{ $trxIso }}">
+                                                                {{ optional($order->transaction_time)->timezone(config('app.timezone'))->format('Y-m-d H:i:s') }}
+                                                            </a>
                                                         </td>
                                                         <td>
                                                             {{ number_format($order->total_price, 0, ',', '.') }}
@@ -310,11 +316,25 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        const userLocale = navigator.language || navigator.userLanguage || 'en';
+        if (typeof moment === 'function' && typeof moment.locale === 'function') {
+            moment.locale(userLocale);
+        }
+
         function formatIDR(n){ if(n==null) return '-'; return (n).toLocaleString('id-ID'); }
+        function formatDateTime(value){
+            if(!value) return '-';
+            if(typeof moment !== 'function') return value;
+            let parsed = moment.parseZone(value);
+            if(!parsed.isValid()){ parsed = moment(value); }
+            if(!parsed.isValid()) return value;
+            return parsed.local().format('LLL');
+        }
         function renderOrderModal(data){
             const wrap = document.getElementById('orderDetailsModal'); if(!wrap) return;
             document.getElementById('odTrx').textContent = data.transaction_number || data.id;
-            document.getElementById('odTime').textContent = data.transaction_time || '';
+            const trxTime = data.transaction_time_iso || data.transaction_time || '';
+            document.getElementById('odTime').textContent = formatDateTime(trxTime);
             document.getElementById('odPayment').textContent = data.payment_method || '-';
             document.getElementById('odStatus').textContent = (data.status||'-');
             document.getElementById('odCashier').textContent = data.cashier || '-';
@@ -485,6 +505,10 @@
 
         // Hook order details links
         document.addEventListener('click', function(e){ const a=e.target.closest('.js-order-details'); if(!a) return; e.preventDefault(); const url=a.getAttribute('data-url'); if(!url) return; fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(renderOrderModal).catch(()=>alert('Gagal mengambil detail order')); });
+        document.querySelectorAll('.js-transaction-time-display').forEach(el=>{
+            const raw = el.getAttribute('data-time') || el.textContent;
+            el.textContent = formatDateTime(raw);
+        });
 
         $(function(){
             // Initialize Select2 for multi-select filters
