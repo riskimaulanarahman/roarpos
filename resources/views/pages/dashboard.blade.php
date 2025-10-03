@@ -129,8 +129,13 @@
                                         @foreach ($orders as $order)
                                             <tr>
                                                 <td>
-                                                    <a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">
-                                                        {{ $order->transaction_time }}
+                                                    <a href="#" class="js-order-details"
+                                                       data-url="{{ route('order.details_json', $order->id) }}"
+                                                       data-transaction-time="{{ $order->transaction_time_iso }}">
+                                                        <span class="js-transaction-time-display"
+                                                              data-time="{{ $order->transaction_time_iso ?: $order->transaction_time_display }}">
+                                                            {{ $order->transaction_time_display ?? '-' }}
+                                                        </span>
                                                     </a>
                                                 </td>
                                                 <td>{{ number_format($order->total_price, 0, ',', '.') }}</td>
@@ -313,10 +318,24 @@
     <!-- Page Specific JS File -->
     <script src="{{ asset('js/page/index-0.js') }}"></script>
     <script>
+        const userLocale = navigator.language || navigator.userLanguage || 'en';
+        if (typeof moment === 'function' && typeof moment.locale === 'function') {
+            moment.locale(userLocale);
+        }
+
         function formatIDR(n){ if(n==null) return '-'; return (n).toLocaleString('id-ID'); }
+        function formatDateTime(value){
+            if(!value) return '-';
+            if(typeof moment !== 'function') return value;
+            let parsed = moment.parseZone(value);
+            if(!parsed.isValid()){ parsed = moment(value); }
+            if(!parsed.isValid()) return value;
+            return parsed.local().format('LLL');
+        }
         function renderOrderModal(data){
             document.getElementById('odTrx').textContent = data.transaction_number || data.id;
-            document.getElementById('odTime').textContent = data.transaction_time || '';
+            const trxTime = data.transaction_time_iso || data.transaction_time || '';
+            document.getElementById('odTime').textContent = formatDateTime(trxTime);
             document.getElementById('odPayment').textContent = data.payment_method || '-';
             document.getElementById('odStatus').textContent = (data.status||'-');
             document.getElementById('odCashier').textContent = data.cashier || '-';
@@ -333,6 +352,10 @@
             });
             $('#orderDetailsModal').modal('show');
         }
+        document.querySelectorAll('.js-transaction-time-display').forEach(el=>{
+            const raw = el.getAttribute('data-time') || el.textContent;
+            el.textContent = formatDateTime(raw);
+        });
 
         async function loadSalesSeries(params){
             const qs = new URLSearchParams(params).toString();

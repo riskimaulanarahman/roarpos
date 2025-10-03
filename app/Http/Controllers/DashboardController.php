@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\OrderItem;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -29,6 +30,7 @@ class DashboardController extends Controller
             ->whereDate('created_at', Carbon::today())
             ->orderBy('created_at', 'DESC')
             ->paginate(10, ['*'], 'orders_page');
+        $orders = $this->appendTransactionTimeMeta($orders);
 
         $totalPriceToday = Order::where('user_id', $userId)
             ->whereDate('created_at', Carbon::today())
@@ -123,6 +125,7 @@ class DashboardController extends Controller
             ->whereDate('created_at', Carbon::today())
             ->orderBy('created_at', 'DESC')
             ->paginate(10, ['*'], 'orders_page');
+        $orders = $this->appendTransactionTimeMeta($orders);
 
         $totalPriceToday = Order::where('user_id', $userId)
             ->whereDate('created_at', Carbon::today())
@@ -184,5 +187,37 @@ class DashboardController extends Controller
         }
 
         return $dailyData;
+    }
+
+    private function appendTransactionTimeMeta($orders)
+    {
+        $collection = $orders->getCollection();
+        $collection->transform(function ($order) {
+            $transactionTime = $order->transaction_time;
+
+            if ($transactionTime instanceof CarbonInterface) {
+                $iso = $transactionTime->toIso8601String();
+                $fallback = $transactionTime->toDateTimeString();
+            } elseif ($transactionTime) {
+                try {
+                    $carbon = Carbon::parse($transactionTime, config('app.timezone'));
+                    $iso = $carbon->toIso8601String();
+                    $fallback = $carbon->toDateTimeString();
+                } catch (\Throwable $e) {
+                    $iso = null;
+                    $fallback = is_scalar($transactionTime) ? (string) $transactionTime : null;
+                }
+            } else {
+                $iso = null;
+                $fallback = null;
+            }
+
+            $order->transaction_time_iso = $iso;
+            $order->transaction_time_display = $fallback ?? '-';
+
+            return $order;
+        });
+
+        return $orders->setCollection($collection);
     }
 }
