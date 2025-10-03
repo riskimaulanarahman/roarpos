@@ -330,7 +330,7 @@
             let parsed = moment.parseZone(value);
             if(!parsed.isValid()){ parsed = moment(value); }
             if(!parsed.isValid()) return value;
-            return parsed.local().format('LLL');
+            return parsed.local().format('YYYY-MM-DD HH:mm:ss');
         }
         function renderOrderModal(data){
             document.getElementById('odTrx').textContent = data.transaction_number || data.id;
