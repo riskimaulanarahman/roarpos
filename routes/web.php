@@ -39,6 +39,18 @@ Route::get('/run-worker', function () {
     }
 });
 
+Route::get('/run-worker2', function () {
+    try {
+        Artisan::call('queue:work', [
+            '--stop-when-empty' => true, // langsung berhenti kalau kosong
+        ]);
+
+        return response('Executed 1 job from queue.', 200);
+    } catch (\Exception $e) {
+        return response('Error: ' . $e->getMessage(), 500);
+    }
+});
+
 // Swagger UI at /api/docs (only non-production or admin users)
 Route::get('/api/docs', function () {
     if (app()->environment('production')) {
