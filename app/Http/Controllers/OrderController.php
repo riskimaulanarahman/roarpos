@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -34,10 +35,20 @@ class OrderController extends Controller
             ->where('user_id', $userId)
             ->findOrFail($id);
 
+        $transactionTime = $order->transaction_time;
+        if ($transactionTime instanceof CarbonInterface) {
+            $transactionTimeIso = $transactionTime->toIso8601String();
+        } elseif ($transactionTime) {
+            $transactionTimeIso = Carbon::parse($transactionTime, config('app.timezone'))->toIso8601String();
+        } else {
+            $transactionTimeIso = null;
+        }
+
         return response()->json([
             'id' => $order->id,
             'transaction_number' => $order->transaction_number,
             'transaction_time' => $order->transaction_time,
+            'transaction_time_iso' => $transactionTimeIso,
             'payment_method' => $order->payment_method,
             'status' => $order->status,
             'sub_total' => $order->sub_total,

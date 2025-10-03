@@ -1,5 +1,10 @@
 @extends('layouts.app')
 
+@php
+    use Carbon\Carbon;
+    use Carbon\CarbonInterface;
+@endphp
+
 @section('title', 'Orders')
 
 @push('style')
@@ -74,9 +79,31 @@
                                             <th>Kasir</th>
                                         </tr>
                                         @foreach ($orders as $order)
+                                            @php
+                                                $transactionTime = $order->transaction_time;
+                                                if ($transactionTime instanceof CarbonInterface) {
+                                                    $transactionTimeIso = $transactionTime->toIso8601String();
+                                                    $transactionTimeFallback = $transactionTime->toDateTimeString();
+                                                } elseif ($transactionTime) {
+                                                    $transactionTimeIso = Carbon::parse($transactionTime, config('app.timezone'))->toIso8601String();
+                                                    $transactionTimeFallback = $transactionTime;
+                                                } else {
+                                                    $transactionTimeIso = '';
+                                                    $transactionTimeFallback = '-';
+                                                }
+                                            @endphp
                                             <tr>
 
-                                                <td><a href="#" class="js-order-details" data-url="{{ route('order.details_json', $order->id) }}">{{ $order->transaction_time }}</a>
+                                                <td>
+                                                    <a href="#"
+                                                       class="js-order-details"
+                                                       data-url="{{ route('order.details_json', $order->id) }}"
+                                                       data-transaction-time="{{ $transactionTimeIso }}">
+                                                        <span class="js-transaction-time-display"
+                                                              data-time="{{ $transactionTimeIso ?: $transactionTimeFallback }}">
+                                                            {{ $transactionTimeFallback }}
+                                                        </span>
+                                                    </a>
                                                 </td>
                                                 <td>
                                                     {{ number_format($order->sub_total, 0, ',', '.') }}
@@ -177,10 +204,24 @@
     <!-- Page Specific JS File -->
     <script src="{{ asset('js/page/features-posts.js') }}"></script>
     <script>
+        const userLocale = navigator.language || navigator.userLanguage || 'en';
+        if (typeof moment === 'function' && typeof moment.locale === 'function') {
+            moment.locale(userLocale);
+        }
+
         function formatIDR(n){ if(n==null) return '-'; return (n).toLocaleString('id-ID'); }
+        function formatDateTime(value){
+            if(!value) return '-';
+            if(typeof moment !== 'function') return value;
+            let parsed = moment.parseZone(value);
+            if(!parsed.isValid()){ parsed = moment(value); }
+            if(!parsed.isValid()) return value;
+            return parsed.local().format('LLL');
+        }
         function renderOrderModal(data){
             document.getElementById('odTrx').textContent = data.transaction_number || data.id;
-            document.getElementById('odTime').textContent = data.transaction_time || '';
+            const trxTime = data.transaction_time_iso || data.transaction_time || '';
+            document.getElementById('odTime').textContent = formatDateTime(trxTime);
             document.getElementById('odPayment').textContent = data.payment_method || '-';
             document.getElementById('odStatus').textContent = (data.status||'-');
             document.getElementById('odCashier').textContent = data.cashier || '-';
@@ -197,6 +238,10 @@
             });
             $('#orderDetailsModal').modal('show');
         }
+        document.querySelectorAll('.js-transaction-time-display').forEach(el=>{
+            const raw = el.getAttribute('data-time') || el.textContent;
+            el.textContent = formatDateTime(raw);
+        });
         document.querySelectorAll('.js-order-details').forEach(a=>{
             a.addEventListener('click', function(e){ e.preventDefault(); const url=this.getAttribute('data-url'); if(!url) return;
                 fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }}).then(r=>r.json()).then(renderOrderModal).catch(()=>alert('Gagal mengambil detail order'));

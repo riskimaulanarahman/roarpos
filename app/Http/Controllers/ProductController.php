@@ -171,7 +171,7 @@ class ProductController extends Controller
                 if ($product->image && $product->image !== 'roar-logo.png') {
                     $oldPath = public_path('products/' . $product->image);
                     if (file_exists($oldPath)) {
-                        @unlink($oldPath);
+@unlink($oldPath);
                     }
                 }
                 $filename = time() . '.' . $request->file('image')->extension();
@@ -202,7 +202,7 @@ class ProductController extends Controller
         if ($product->image && $product->image !== 'roar-logo.png') {
             $path = public_path('products/' . $product->image);
             if (file_exists($path)) {
-                @unlink($path);
+@unlink($path);
             }
         }
         $product->delete();
