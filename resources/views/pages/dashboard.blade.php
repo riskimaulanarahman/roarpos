@@ -112,6 +112,19 @@
                                     {{ number_format($totalPriceToday, 0, ',', '.') }}
                                 </h4>
                             </div>
+                            <p class="text-muted small mb-3">
+                                @if(($sessionRange['hasSession'] ?? false) && !empty($sessionRange['sessionId']))
+                                    Sesi kasir #{{ $sessionRange['sessionId'] }} ({{ ucfirst($sessionRange['status'] ?? '-') }}):
+                                    <span class="js-transaction-time-display" data-time="{{ $sessionRange['start_iso'] }}">{{ $sessionRange['start'] }}</span>
+                                    -
+                                    <span class="js-transaction-time-display" data-time="{{ $sessionRange['end_iso'] }}">{{ $sessionRange['end'] }}</span>
+                                @else
+                                    Rentang hari ini:
+                                    <span class="js-transaction-time-display" data-time="{{ $sessionRange['start_iso'] ?? null }}">{{ $sessionRange['start'] ?? '-' }}</span>
+                                    -
+                                    <span class="js-transaction-time-display" data-time="{{ $sessionRange['end_iso'] ?? null }}">{{ $sessionRange['end'] ?? '-' }}</span>
+                                @endif
+                            </p>
 
                             <div class="table-responsive">
                                 <table class="table table-striped mb-3">
@@ -165,6 +178,12 @@
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h4 class="mb-0 text-primary">Breakdown by Payment Method (Today)</h4>
                             </div>
+                            <p class="text-muted small">
+                                Rentang:
+                                <span class="js-transaction-time-display" data-time="{{ $sessionRange['start_iso'] ?? null }}">{{ $sessionRange['start'] ?? '-' }}</span>
+                                -
+                                <span class="js-transaction-time-display" data-time="{{ $sessionRange['end_iso'] ?? null }}">{{ $sessionRange['end'] ?? '-' }}</span>
+                            </p>
 
                             @if(isset($paymentBreakdownToday) && $paymentBreakdownToday->count())
                                 <div class="table-responsive">
@@ -193,6 +212,84 @@
                 </div>
             </div>
 
+            {{-- ===== CASHIER SESSION SUMMARY ===== --}}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0 text-primary">Cashier Sessions (Terbaru)</h4>
+                            </div>
+
+                            @if(isset($cashierSessionSummaries) && $cashierSessionSummaries->count())
+                                <div class="table-responsive">
+                                    <table class="table table-striped mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Session</th>
+                                                <th>Dibuka</th>
+                                                <th>Ditutup</th>
+                                                <th>Status</th>
+                                                <th>Net Sales</th>
+                                                <th>Transaksi</th>
+                                                <th>Selisih Kas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($cashierSessionSummaries as $session)
+                                                <tr>
+                                                    <td>
+                                                        #{{ $session['id'] }}<br>
+                                                        <small class="text-muted">{{ $session['opened_by'] ?? '—' }}
+                                                            @if(!empty($session['closed_by']))
+                                                                → {{ $session['closed_by'] }}
+                                                            @endif
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        @if(!empty($session['opened_at_display']))
+                                                            <span class="js-transaction-time-display"
+                                                                  data-time="{{ $session['opened_at_iso'] }}">
+                                                                {{ $session['opened_at_display'] }}
+                                                            </span>
+                                                        @else
+                                                            -
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if(!empty($session['closed_at_display']))
+                                                            <span class="js-transaction-time-display"
+                                                                  data-time="{{ $session['closed_at_iso'] }}">
+                                                                {{ $session['closed_at_display'] }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge badge-warning">Masih berjalan</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>{{ ucfirst($session['status'] ?? '-') }}</td>
+                                                    <td>{{ number_format($session['totals']['net_sales'] ?? 0, 0, ',', '.') }}</td>
+                                                    <td>
+                                                        {{ $session['transactions']['completed'] ?? 0 }} selesai
+                                                        @if(($session['transactions']['refunded'] ?? 0) > 0)
+                                                            <br><small class="text-muted">{{ $session['transactions']['refunded'] }} refund</small>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        {{ number_format($session['cash_balance']['difference'] ?? 0, 0, ',', '.') }}
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @else
+                                <div class="text-muted">Belum ada sesi kasir yang terekam.</div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {{-- ===== PRODUK TERJUAL HARI INI ===== --}}
             <div class="row">
                 <div class="col-12">
@@ -201,6 +298,12 @@
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h4 class="mb-0 text-primary">Products Sold Today</h4>
                             </div>
+                            <p class="text-muted small">
+                                Rentang:
+                                <span class="js-transaction-time-display" data-time="{{ $sessionRange['start_iso'] ?? null }}">{{ $sessionRange['start'] ?? '-' }}</span>
+                                -
+                                <span class="js-transaction-time-display" data-time="{{ $sessionRange['end_iso'] ?? null }}">{{ $sessionRange['end'] ?? '-' }}</span>
+                            </p>
 
                             @if(isset($productSalesToday) && $productSalesToday->count())
                                 <div class="table-responsive">

@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashierSession;
 use App\Models\Category;
 use App\Models\Discount;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
-use App\Models\OrderItem;
+use App\Services\CashierSummaryService;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Request;
@@ -25,21 +27,23 @@ class DashboardController extends Controller
         // $discounts= Discount::count();
         // $additional_charges = \App\Models\AdditionalCharges::where('user_id', $userId)->count();
 
+        [$rangeStart, $rangeEnd, $activeSession] = $this->resolveActiveSessionRange($userId);
+
         $orders = Order::with('user')
             ->where('user_id', $userId)
-            ->whereDate('created_at', Carbon::today())
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->orderBy('created_at', 'DESC')
             ->paginate(10, ['*'], 'orders_page');
         $orders = $this->appendTransactionTimeMeta($orders);
 
         $totalPriceToday = Order::where('user_id', $userId)
-            ->whereDate('created_at', Carbon::today())
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->sum('total_price');
 
         // Breakdown revenue today by payment method
         $paymentBreakdownToday = Order::select('payment_method', DB::raw('SUM(total_price) as total_revenue'))
             ->where('user_id', $userId)
-            ->whereDate('created_at', Carbon::today())
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->groupBy('payment_method')
             ->orderByDesc(DB::raw('SUM(total_price)'))
             ->get();
@@ -52,7 +56,7 @@ class DashboardController extends Controller
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->where('orders.user_id', $userId)
-            ->whereDate('orders.created_at', Carbon::today())
+            ->whereBetween('orders.created_at', [$rangeStart, $rangeEnd])
             ->groupBy('products.name')
             ->orderByDesc('total_quantity')
             ->paginate(10, ['*'], 'products_page');
@@ -61,6 +65,8 @@ class DashboardController extends Controller
         $year = date('Y');
 
         $data = $this->getMonthlyData($month, $year, $userId);
+        $cashierSessionSummaries = $this->getCashierSessionSummaries($userId);
+        $sessionRange = $this->formatSessionRangeForView($rangeStart, $rangeEnd, $activeSession);
 
         // Monthly summary for completed orders (current month)
         $monthlyCompletedOrders = Order::where('user_id', $userId)
@@ -98,7 +104,10 @@ class DashboardController extends Controller
             'monthlyCompletedOrders',
             'monthlyCompletedRevenue',
             'monthlyAov',
-            'monthlyPaymentMethods'
+            'monthlyPaymentMethods',
+            'cashierSessionSummaries',
+            'sessionRange',
+            'activeSession'
         ));
     }
 
@@ -120,21 +129,23 @@ class DashboardController extends Controller
         // $discounts= Discount::count();
         // $additional_charges = \App\Models\AdditionalCharges::where('user_id', $userId)->count();
 
+        [$rangeStart, $rangeEnd, $activeSession] = $this->resolveActiveSessionRange($userId);
+
         $orders = Order::with('user')
             ->where('user_id', $userId)
-            ->whereDate('created_at', Carbon::today())
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->orderBy('created_at', 'DESC')
             ->paginate(10, ['*'], 'orders_page');
         $orders = $this->appendTransactionTimeMeta($orders);
 
         $totalPriceToday = Order::where('user_id', $userId)
-            ->whereDate('created_at', Carbon::today())
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->sum('total_price');
 
         // Breakdown revenue today by payment method
         $paymentBreakdownToday = Order::select('payment_method', DB::raw('SUM(total_price) as total_revenue'))
             ->where('user_id', $userId)
-            ->whereDate('created_at', Carbon::today())
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->groupBy('payment_method')
             ->orderByDesc(DB::raw('SUM(total_price)'))
             ->get();
@@ -147,12 +158,14 @@ class DashboardController extends Controller
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->where('orders.user_id', $userId)
-            ->whereDate('orders.created_at', Carbon::today())
+            ->whereBetween('orders.created_at', [$rangeStart, $rangeEnd])
             ->groupBy('products.name')
             ->orderByDesc('total_quantity')
             ->paginate(10, ['*'], 'products_page');
 
         $data = $this->getMonthlyData($month, $year, $userId);
+        $cashierSessionSummaries = $this->getCashierSessionSummaries($userId);
+        $sessionRange = $this->formatSessionRangeForView($rangeStart, $rangeEnd, $activeSession);
 
         return view('pages.dashboard', compact(
             'users',
@@ -165,7 +178,10 @@ class DashboardController extends Controller
             'paymentBreakdownToday',
             'data',
             'month',
-            'year'
+            'year',
+            'cashierSessionSummaries',
+            'sessionRange',
+            'activeSession'
         ));
     }
 
@@ -219,5 +235,80 @@ class DashboardController extends Controller
         });
 
         return $orders->setCollection($collection);
+    }
+
+    private function resolveActiveSessionRange(int $userId): array
+    {
+        $openSession = CashierSession::where('user_id', $userId)
+            ->where('status', 'open')
+            ->latest('opened_at')
+            ->first();
+
+        $fallbackSession = CashierSession::where('user_id', $userId)
+            ->latest('opened_at')
+            ->first();
+
+        $session = $openSession ?? $fallbackSession;
+
+        if ($session) {
+            $start = $session->opened_at ?? $session->created_at ?? now()->startOfDay();
+            $end = $session->closed_at ?? now();
+
+            return [$start->copy(), $end->copy(), $session];
+        }
+
+        $todayStart = now()->startOfDay();
+
+        return [$todayStart->copy(), now(), null];
+    }
+
+    private function formatSessionRangeForView(Carbon $start, Carbon $end, ?CashierSession $session): array
+    {
+        $timezone = config('app.timezone', 'UTC');
+
+        $startLocal = $start->copy()->setTimezone($timezone);
+        $endLocal = $end->copy()->setTimezone($timezone);
+
+        return [
+            'start' => $startLocal->format('Y-m-d H:i:s'),
+            'end' => $endLocal->format('Y-m-d H:i:s'),
+            'start_iso' => $startLocal->toIso8601String(),
+            'end_iso' => $endLocal->toIso8601String(),
+            'hasSession' => (bool) $session,
+            'sessionId' => $session?->id,
+            'status' => $session?->status,
+        ];
+    }
+
+    private function getCashierSessionSummaries(int $userId, int $limit = 5)
+    {
+        $summaryService = app(CashierSummaryService::class);
+
+        return CashierSession::with(['openedBy:id,name', 'closedBy:id,name'])
+            ->where('user_id', $userId)
+            ->latest('opened_at')
+            ->take($limit)
+            ->get()
+            ->map(function (CashierSession $session) use ($summaryService) {
+                $summary = $summaryService->generate($session);
+
+                $openedAt = $session->opened_at ? $session->opened_at->copy() : null;
+                $closedAt = $session->closed_at ? $session->closed_at->copy() : null;
+                $appTimezone = config('app.timezone', 'UTC');
+
+                return [
+                    'id' => $session->id,
+                    'status' => $session->status,
+                    'opened_by' => $session->openedBy?->name,
+                    'closed_by' => $session->closedBy?->name,
+                    'opened_at_iso' => $openedAt?->toIso8601String(),
+                    'closed_at_iso' => $closedAt?->toIso8601String(),
+                    'opened_at_display' => $openedAt?->setTimezone($appTimezone)->format('Y-m-d H:i:s'),
+                    'closed_at_display' => $closedAt?->setTimezone($appTimezone)->format('Y-m-d H:i:s'),
+                    'totals' => $summary['totals'],
+                    'transactions' => $summary['transactions'],
+                    'cash_balance' => $summary['cash_balance'],
+                ];
+            });
     }
 }
