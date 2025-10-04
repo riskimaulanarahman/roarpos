@@ -56,10 +56,18 @@ class CashierSummaryService
          * Breakdown pembayaran (masih berdasarkan non-refund agar tetap terlihat rapi)
          */
         $paymentBreakdown = [];
+        $cashSales = 0.0;
         foreach ($nonRefundOrders->groupBy('payment_method') as $method => $collection) {
             $methodLabel = strtoupper($method ?? 'UNKNOWN');
             $amount = (float) $collection->sum('total_price');
 
+<<<<<<< ours
+=======
+            if ($methodLabel === 'CASH') {
+                $cashSales = $amount;
+            }
+
+>>>>>>> theirs
             $paymentBreakdown[] = [
                 'method' => $methodLabel,
                 'amount' => $amount,
@@ -76,6 +84,7 @@ class CashierSummaryService
         });
 
         $cashRefunds = (float) $refundOrders
+<<<<<<< ours
             ->filter(fn ($order) => strtolower($order->refund_method ?? '') === 'cash')
             ->sum(fn ($order) => $order->refund_nominal ?? $order->total_price ?? 0);
 
@@ -86,6 +95,17 @@ class CashierSummaryService
          * Karena cashSales sudah memperhitungkan refund, expectedCash cukup:
          */
         $expectedCash = $openingBalance + $cashSales;
+=======
+            ->filter(function ($order) {
+                return strtolower($order->refund_method ?? '') === 'cash';
+            })
+            ->sum(function ($order) {
+                return $order->refund_nominal ?? $order->total_price ?? 0;
+            });
+
+        $openingBalance = (float) ($session->opening_balance ?? 0);
+        $countedCash = (float) ($session->closing_balance ?? 0);
+        $expectedCash = $openingBalance + $cashSales - $cashRefunds;
 
         $summary = [
             'session' => [
