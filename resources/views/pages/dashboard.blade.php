@@ -230,7 +230,7 @@
                                                 <th>Dibuka</th>
                                                 <th>Ditutup</th>
                                                 <th>Status</th>
-                                                <th>Penjualan</th>
+                                                <th>Net Sales</th>
                                                 <th>Transaksi</th>
                                                 <th>Selisih Kas</th>
                                             </tr>
@@ -267,11 +267,7 @@
                                                         @endif
                                                     </td>
                                                     <td>{{ ucfirst($session['status'] ?? '-') }}</td>
-                                                    <td>
-                                                        <strong class="d-block text-success">Rp{{ number_format($session['totals']['net_sales'] ?? 0, 0, ',', '.') }}</strong>
-                                                        <small class="text-muted d-block">Bruto: Rp{{ number_format($session['totals']['sales'] ?? 0, 0, ',', '.') }}</small>
-                                                        <small class="text-muted d-block">Refund: Rp{{ number_format($session['totals']['refunds'] ?? 0, 0, ',', '.') }}</small>
-                                                    </td>
+                                                    <td>{{ number_format($session['totals']['net_sales'] ?? 0, 0, ',', '.') }}</td>
                                                     <td>
                                                         {{ $session['transactions']['completed'] ?? 0 }} selesai
                                                         @if(($session['transactions']['refunded'] ?? 0) > 0)
@@ -279,9 +275,7 @@
                                                         @endif
                                                     </td>
                                                     <td>
-                                                        <strong class="d-block">Rp{{ number_format($session['cash_balance']['difference'] ?? 0, 0, ',', '.') }}</strong>
-                                                        <small class="text-muted d-block">Estimasi kas: Rp{{ number_format($session['cash_balance']['expected'] ?? 0, 0, ',', '.') }}</small>
-                                                        <small class="text-muted d-block">Refund tunai: Rp{{ number_format($session['cash_balance']['cash_refunds'] ?? 0, 0, ',', '.') }}</small>
+                                                        {{ number_format($session['cash_balance']['difference'] ?? 0, 0, ',', '.') }}
                                                     </td>
                                                 </tr>
                                             @endforeach
