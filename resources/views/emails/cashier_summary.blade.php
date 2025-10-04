@@ -80,8 +80,8 @@
     <div style="margin-bottom: 16px;">
         <div style="font-weight: 600; color: #111827; font-size: 15px; margin-bottom: 8px;">Ringkasan Penjualan</div>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px; color: #374151;">
-            <tr><td style="padding: 4px 0; width: 45%;">Penjualan bruto</td><td style="padding: 4px 0;">Rp{{ number_format($salesTotal, 0, ',', '.') }}</td></tr>
-            <tr><td style="padding: 4px 0;">Refund</td><td style="padding: 4px 0;">Rp{{ number_format($refundTotal, 0, ',', '.') }}</td></tr>
+            <tr><td style="padding: 4px 0; width: 45%;">Total penjualan</td><td style="padding: 4px 0;">Rp{{ number_format($salesTotal, 0, ',', '.') }}</td></tr>
+            <tr><td style="padding: 4px 0;">Total refund</td><td style="padding: 4px 0;">Rp{{ number_format($refundTotal, 0, ',', '.') }}</td></tr>
             <tr><td style="padding: 4px 0;">Penjualan bersih</td><td style="padding: 4px 0;">Rp{{ number_format($netSales, 0, ',', '.') }}</td></tr>
         </table>
     </div>
@@ -90,13 +90,11 @@
         <div style="font-weight: 600; color: #111827; font-size: 15px; margin-bottom: 8px;">Saldo Kas Tunai</div>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px; color: #374151;">
             <tr><td style="padding: 4px 0; width: 45%;">Modal awal</td><td style="padding: 4px 0;">Rp{{ number_format($cashBalance['opening'] ?? 0, 0, ',', '.') }}</td></tr>
-            <tr><td style="padding: 4px 0;">Penjualan cash (bruto)</td><td style="padding: 4px 0;">Rp{{ number_format($cashBalance['cash_sales_gross'] ?? 0, 0, ',', '.') }}</td></tr>
+            <tr><td style="padding: 4px 0;">Penjualan cash</td><td style="padding: 4px 0;">Rp{{ number_format($cashBalance['cash_sales'] ?? 0, 0, ',', '.') }}</td></tr>
             <tr><td style="padding: 4px 0;">Refund cash</td><td style="padding: 4px 0;">Rp{{ number_format($cashBalance['cash_refunds'] ?? 0, 0, ',', '.') }}</td></tr>
-            <tr><td style="padding: 4px 0;">Penjualan cash (net)</td><td style="padding: 4px 0;">Rp{{ number_format($cashBalance['cash_sales'] ?? 0, 0, ',', '.') }}</td></tr>
             <tr><td style="padding: 4px 0;">Estimasi kas</td><td style="padding: 4px 0;">Rp{{ number_format($cashBalance['expected'] ?? 0, 0, ',', '.') }}</td></tr>
             <tr><td style="padding: 4px 0;">Kas dihitung</td><td style="padding: 4px 0;">Rp{{ number_format($cashBalance['counted'] ?? 0, 0, ',', '.') }}</td></tr>
         </table>
-        <p style="margin: 8px 0 0; font-size: 12px; color: #6B7280;">Penjualan cash (net) = bruto - refund; estimasi kas memakai angka net agar sesuai dengan saldo fisik.</p>
     </div>
 
     <div>

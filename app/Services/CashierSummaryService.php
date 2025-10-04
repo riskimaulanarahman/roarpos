@@ -43,13 +43,13 @@ class CashierSummaryService
         $refundOrders = $orders->filter(fn ($order) => $order->status === 'refund');
 
         $paymentBreakdown = [];
-        $cashGrossSales = 0.0;
+        $cashSales = 0.0;
         foreach ($nonRefundOrders->groupBy('payment_method') as $method => $collection) {
             $methodLabel = strtoupper($method ?? 'UNKNOWN');
             $amount = (float) $collection->sum('total_price');
 
             if ($methodLabel === 'CASH') {
-                $cashGrossSales = $amount;
+                $cashSales = $amount;
             }
 
             $paymentBreakdown[] = [
@@ -72,11 +72,9 @@ class CashierSummaryService
                 return $order->refund_nominal ?? $order->total_price ?? 0;
             });
 
-        $cashNetSales = $cashGrossSales - $cashRefunds;
-
         $openingBalance = (float) ($session->opening_balance ?? 0);
         $countedCash = (float) ($session->closing_balance ?? 0);
-        $expectedCash = $openingBalance + $cashNetSales;
+        $expectedCash = $openingBalance + $cashSales - $cashRefunds;
 
         $summary = [
             'session' => [
@@ -101,8 +99,7 @@ class CashierSummaryService
             ],
             'cash_balance' => [
                 'opening' => $openingBalance,
-                'cash_sales_gross' => $cashGrossSales,
-                'cash_sales' => $cashNetSales,
+                'cash_sales' => $cashSales,
                 'cash_refunds' => $cashRefunds,
                 'expected' => $expectedCash,
                 'counted' => $countedCash,
