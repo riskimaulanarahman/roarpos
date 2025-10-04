@@ -42,30 +42,23 @@ class CashierSummaryService
         $nonRefundOrders = $orders->filter(fn ($order) => $order->status !== 'refund');
         $refundOrders = $orders->filter(fn ($order) => $order->status === 'refund');
 
+        /**
+         * Hitung total penjualan cash termasuk refund (refund dikurangi)
+         */
+        $cashSales = (float) $orders
+            ->filter(fn ($order) => strtoupper($order->payment_method ?? '') === 'CASH')
+            ->sum(fn ($order) => $order->status === 'refund'
+                ? -($order->refund_nominal ?? $order->total_price ?? 0)
+                : ($order->total_price ?? 0)
+            );
+
+        /**
+         * Breakdown pembayaran (masih berdasarkan non-refund agar tetap terlihat rapi)
+         */
         $paymentBreakdown = [];
-        $cashSales = 0.0;
-        // foreach ($nonRefundOrders->groupBy('payment_method') as $method => $collection) {
-        //     $methodLabel = strtoupper($method ?? 'UNKNOWN');
-        //     $amount = (float) $collection->sum('total_price');
-
-        //     if ($methodLabel === 'CASH') {
-        //         $cashSales = $amount;
-        //     }
-
-        //     $paymentBreakdown[] = [
-        //         'method' => $methodLabel,
-        //         'amount' => $amount,
-        //         'transactions' => $collection->count(),
-        //     ];
-        // }
-        foreach ($orders->groupBy('payment_method') as $method => $collection) {
+        foreach ($nonRefundOrders->groupBy('payment_method') as $method => $collection) {
             $methodLabel = strtoupper($method ?? 'UNKNOWN');
             $amount = (float) $collection->sum('total_price');
-
-            // Total cash termasuk refund cash
-            if ($methodLabel === 'CASH') {
-                $cashSales = $amount;
-            }
 
             $paymentBreakdown[] = [
                 'method' => $methodLabel,
@@ -74,22 +67,25 @@ class CashierSummaryService
             ];
         }
 
+        /**
+         * Hitung total penjualan dan refund
+         */
         $totalSales = (float) $nonRefundOrders->sum('total_price');
         $refundTotal = (float) $refundOrders->sum(function ($order) {
             return $order->refund_nominal ?? $order->total_price ?? 0;
         });
 
         $cashRefunds = (float) $refundOrders
-            ->filter(function ($order) {
-                return strtolower($order->refund_method ?? '') === 'cash';
-            })
-            ->sum(function ($order) {
-                return $order->refund_nominal ?? $order->total_price ?? 0;
-            });
+            ->filter(fn ($order) => strtolower($order->refund_method ?? '') === 'cash')
+            ->sum(fn ($order) => $order->refund_nominal ?? $order->total_price ?? 0);
 
         $openingBalance = (float) ($session->opening_balance ?? 0);
         $countedCash = (float) ($session->closing_balance ?? 0);
-        $expectedCash = $openingBalance + $cashSales - $cashRefunds;
+
+        /**
+         * Karena cashSales sudah memperhitungkan refund, expectedCash cukup:
+         */
+        $expectedCash = $openingBalance + $cashSales;
 
         $summary = [
             'session' => [
