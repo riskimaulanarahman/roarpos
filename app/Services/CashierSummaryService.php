@@ -61,13 +61,6 @@ class CashierSummaryService
             $methodLabel = strtoupper($method ?? 'UNKNOWN');
             $amount = (float) $collection->sum('total_price');
 
-<<<<<<< ours
-=======
-            if ($methodLabel === 'CASH') {
-                $cashSales = $amount;
-            }
-
->>>>>>> theirs
             $paymentBreakdown[] = [
                 'method' => $methodLabel,
                 'amount' => $amount,
