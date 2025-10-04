@@ -89,7 +89,7 @@ class CashierSummaryService
             'totals' => [
                 'sales' => $totalSales,
                 'refunds' => $refundTotal,
-                'net_sales' => $totalSales - $refundTotal,
+                'net_sales' => $totalSales,
             ],
             'payments' => $paymentBreakdown,
             'transactions' => [

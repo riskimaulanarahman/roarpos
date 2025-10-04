@@ -103,7 +103,7 @@ class CashierSessionTest extends TestCase
             ->assertJsonPath('data.session.status', 'closed')
             ->assertJsonPath('data.summary.totals.sales', 200000)
             ->assertJsonPath('data.summary.totals.refunds', 50000)
-            ->assertJsonPath('data.summary.totals.net_sales', 150000)
+            ->assertJsonPath('data.summary.totals.net_sales', 200000)
             ->assertJsonPath('data.summary.cash_balance.opening', 100000)
             ->assertJsonPath('data.summary.cash_balance.cash_sales', 120000)
             ->assertJsonPath('data.summary.cash_balance.cash_refunds', 50000)
