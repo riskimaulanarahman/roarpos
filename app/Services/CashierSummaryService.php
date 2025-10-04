@@ -74,7 +74,7 @@ class CashierSummaryService
             ];
         }
 
-        $totalSales = (float) $nonRefundOrders->sum('total_price');
+        $totalSales = (float) $orders->sum('total_price');
         $refundTotal = (float) $refundOrders->sum(function ($order) {
             return $order->refund_nominal ?? $order->total_price ?? 0;
         });
