@@ -44,10 +44,25 @@ class CashierSummaryService
 
         $paymentBreakdown = [];
         $cashSales = 0.0;
-        foreach ($nonRefundOrders->groupBy('payment_method') as $method => $collection) {
+        // foreach ($nonRefundOrders->groupBy('payment_method') as $method => $collection) {
+        //     $methodLabel = strtoupper($method ?? 'UNKNOWN');
+        //     $amount = (float) $collection->sum('total_price');
+
+        //     if ($methodLabel === 'CASH') {
+        //         $cashSales = $amount;
+        //     }
+
+        //     $paymentBreakdown[] = [
+        //         'method' => $methodLabel,
+        //         'amount' => $amount,
+        //         'transactions' => $collection->count(),
+        //     ];
+        // }
+        foreach ($orders->groupBy('payment_method') as $method => $collection) {
             $methodLabel = strtoupper($method ?? 'UNKNOWN');
             $amount = (float) $collection->sum('total_price');
 
+            // Total cash termasuk refund cash
             if ($methodLabel === 'CASH') {
                 $cashSales = $amount;
             }
